@@ -1,6 +1,5 @@
 package polete.utaplayer
 
-import android.R
 import android.content.Context
 import android.os.Bundle
 import android.provider.MediaStore
@@ -26,12 +25,8 @@ import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
 import polete.utaplayer.ui.theme.UtaplayerTheme
 import androidx.compose.material.icons.*
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
-import androidx.compose.ui.layout.layout
-import androidx.compose.ui.res.painterResource
 
 class MainActivity : ComponentActivity() {
     @OptIn(ExperimentalPermissionsApi::class)
@@ -58,13 +53,23 @@ fun UtaPlayerApp() {
     val context = LocalContext.current
 
     //estats app per guardar cançons i que esta sonant i estat de play pause
-    val llistaCancons = remember { fetchSongs(context) }
-    var currentSong by remember { mutableStateOf<Song?>(null) }
-    var isPlaying by remember { mutableStateOf(false) }
-
+    val songList = remember { fetchSongs(context) } //llista cançons
+    var currentSong by remember { mutableStateOf<Song?>(null) } //canço actual
+    var isPlaying by remember { mutableStateOf(false) } //saber si esta sonant o no
+    var currentPosition by remember { mutableLongStateOf(0L) } //posicio actual canço
+    var duration by remember { mutableLongStateOf(0L) } //duracio canço
     //reproductor
     val exoPlayer = remember { ExoPlayer.Builder(context).build() }
-
+    //Agafar temps i duracio
+    LaunchedEffect(isPlaying) {
+        if (isPlaying) {
+            while (true) {
+                currentPosition = exoPlayer.currentPosition
+                duration = exoPlayer.duration.coerceAtLeast(0L) // fer que minim sigui 0
+                kotlinx.coroutines.delay(1000) // ho fem cada segon
+            }
+        }
+    }
     //listener de exoplayer (necesari) per saber si la musica sona o no
     LaunchedEffect(exoPlayer) {
         exoPlayer.addListener(object : Player.Listener {
@@ -94,7 +99,7 @@ fun UtaPlayerApp() {
     ) { padding ->
         // llistar cançons
         LazyColumn(modifier = Modifier.padding(padding).fillMaxSize()) {
-            items(llistaCancons) { canco ->
+            items(songList) { canco ->
                 SongRow(
                     song = canco,
                     onSongClick = { cancoClicada ->
