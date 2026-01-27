@@ -1,5 +1,6 @@
 package polete.utaplayer
 
+import android.R
 import android.content.Context
 import android.os.Bundle
 import android.provider.MediaStore
@@ -24,6 +25,13 @@ import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
 import polete.utaplayer.ui.theme.UtaplayerTheme
+import androidx.compose.material.icons.*
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.rounded.Pause
+import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.ui.layout.layout
+import androidx.compose.ui.res.painterResource
 
 class MainActivity : ComponentActivity() {
     @OptIn(ExperimentalPermissionsApi::class)
@@ -129,8 +137,13 @@ fun MiniPlayer(song: Song, isPlaying: Boolean, onPlayPause: () -> Unit) {
                 Text(text = song.title, maxLines = 1)
                 Text(text = song.artist, style = MaterialTheme.typography.bodySmall)
             }
-            Button(onClick = onPlayPause) {
-                Text(if (isPlaying) "PAUSA" else "REPRODUIR")
+            IconButton(onClick = onPlayPause) {
+                //icona boto
+                Icon(
+                    imageVector = if (isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
+                    contentDescription = if (isPlaying) "Pausar" else "Reproducir",
+                    modifier = Modifier.size(32.dp),
+                    tint = MaterialTheme.colorScheme.primary                )
             }
         }
     }
