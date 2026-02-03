@@ -9,6 +9,7 @@ import android.provider.MediaStore
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -30,6 +31,8 @@ import com.google.accompanist.permissions.rememberPermissionState
 import polete.utaplayer.ui.theme.UtaplayerTheme
 import androidx.compose.material.icons.*
 import androidx.compose.material.icons.rounded.*
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.layout.ContentScale.Companion.Crop
 import coil.compose.AsyncImage
 import androidx.core.net.toUri
@@ -130,7 +133,10 @@ fun UtaPlayerApp() {
         ) { padding ->
             // llistar cançons
             if(songList.isNotEmpty())
-            LazyColumn(modifier = Modifier.padding(padding).fillMaxSize()) {
+            LazyColumn(modifier = Modifier
+                .padding(padding)
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.primaryContainer)) {
                 items(songList) { canco ->
                     SongRow(
                         song = canco,
@@ -163,15 +169,27 @@ fun UtaPlayerApp() {
 
 @Composable
 fun SongRow(song: Song, onSongClick: (Song) -> Unit) {
-    Column(
+    Row(
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onSongClick(song) } // tornem canço
             .padding(16.dp)
     ) {
-        Text(text = song.title, style = MaterialTheme.typography.titleMedium)
-        Text(text = song.artist, style = MaterialTheme.typography.bodySmall, color = Color.Gray)
-        HorizontalDivider(modifier = Modifier.padding(top = 8.dp))
+            AsyncImage(
+                model = getAlbumArtUri(song.albumId), // funcio per agafar img
+                contentDescription = "album img",
+                contentScale = Crop,
+                modifier = Modifier.size(64.dp).clip(RoundedCornerShape(8.dp)),
+                error = rememberVectorPainter(Icons.Rounded.MusicNote) , // si falla o no te imatge
+                placeholder = rememberVectorPainter(Icons.Rounded.MusicNote) //mentre carrega
+            )
+        Spacer(Modifier.width(16.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(text = song.title, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onPrimaryContainer)
+            Text(text = song.artist, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onPrimaryContainer)
+
+        }
+
     }
 }
 @Composable
@@ -221,8 +239,8 @@ fun PlayerFullScreen(
                         contentDescription = "album img",
                         modifier = Modifier.fillMaxSize(),
                         contentScale = Crop, // fem que agafi tot el lloc
-                        error = androidx.compose.ui.res.painterResource(ic_menu_report_image), // si falla
-                        placeholder = androidx.compose.ui.res.painterResource(ic_menu_gallery) // si no te imatge
+                        error = rememberVectorPainter(Icons.Rounded.MusicNote) , // si falla o no te imatge
+                        placeholder = rememberVectorPainter(Icons.Rounded.MusicNote) //mentre carrega
                     )
 
                 }
@@ -276,8 +294,10 @@ fun fetchSongs(context: Context): List<Song> {
         MediaStore.Audio.Media.DATA,
         MediaStore.Audio.Media.DURATION
     )
+    val selection = "${MediaStore.Audio.Media.IS_MUSIC} = 1" //Ara nomes ens donara musica, no audios de whatsapp i altres coses
 
-    context.contentResolver.query(uri, projection, null, null, null)?.use { cursor ->
+
+    context.contentResolver.query(uri, projection, selection, null, null)?.use { cursor ->
         val titleCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.TITLE)
         val artistCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.ARTIST)
         val dataCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DATA)
