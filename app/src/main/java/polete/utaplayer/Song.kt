@@ -1,7 +1,10 @@
 package polete.utaplayer
 
+import androidx.room.*
+
+@Entity(tableName = "songs")
 data class Song(
-    val id: Long, //ID
+    @PrimaryKey val id: Long, //ID
     val albumId: Long, //Per obtenir portada
     val title: String, //Titol
     val artist: String, //Nom Artista

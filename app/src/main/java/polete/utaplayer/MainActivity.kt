@@ -33,6 +33,7 @@ import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.layout.ContentScale.Companion.Crop
 import coil.compose.AsyncImage
 import androidx.core.net.toUri
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     @OptIn(ExperimentalPermissionsApi::class)
@@ -58,8 +59,11 @@ class MainActivity : ComponentActivity() {
 fun UtaPlayerApp() {
     val context = LocalContext.current
 
-    //estats app per guardar cançons i que esta sonant i estat de play pause
-    var songList by remember { mutableStateOf(fetchSongs(context)) } //llista cançons
+    val database = remember { AppDatabase.getDatabase(context) } //declarem base de dades
+    val songDao = remember { database.songDao() } //declarem el dao
+    //Serveix per mirar la base de dades en temps real
+    val songList by songDao.getAllSongs().collectAsState(emptyList())
+
     var currentSong by remember { mutableStateOf<Song?>(null) } //canço actual
     var isPlaying by remember { mutableStateOf(false) } //saber si esta sonant o no
     var currentPosition by remember { mutableLongStateOf(0L) } //posicio actual canço
@@ -69,14 +73,17 @@ fun UtaPlayerApp() {
     val exoPlayer = remember { ExoPlayer.Builder(context).build() }
 
     LaunchedEffect(Unit) {
-        //cridem a la funcio per mirar si hem afegit musica nova al telefon
-        songList = fetchSongs(context)
-        //aixo pasara cuan acabi d'executarse scanMusic
+// Escanegem el disc per si hi ha fitxers nous
         scanMusic(context) {
-            //fiquem les noves cançons
-            songList = fetchSongs(context)
-        }
-    }
+            // Obtenim la música del sistema (MediaStore)
+            val musicFromSystem = fetchSongs(context)
+
+            // La guardem a la nostra base de dades de Room
+            // Fem servir una corrutina perquè insertSongs és 'suspend'
+            kotlinx.coroutines.GlobalScope.launch {
+                songDao.insertSongs(musicFromSystem)
+            }
+        }    }
     //Agafar temps i duracio
     LaunchedEffect(isPlaying) {
         if (isPlaying) {
