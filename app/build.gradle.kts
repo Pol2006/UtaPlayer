@@ -66,5 +66,6 @@ dependencies {
     implementation("androidx.compose.material:material-icons-extended")
     implementation("io.coil-kt:coil-compose:2.7.0")
     implementation(libs.androidx.room.runtime)
+    implementation("me.saket.squigglyslider:squigglyslider:1.0.0")
     ksp(libs.androidx.room.compiler)
 }

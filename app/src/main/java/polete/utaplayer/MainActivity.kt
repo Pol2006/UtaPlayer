@@ -29,11 +29,15 @@ import polete.utaplayer.ui.theme.UtaplayerTheme
 import androidx.compose.material.icons.*
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.layout.ContentScale.Companion.Crop
+import androidx.compose.ui.text.font.FontWeight
 import coil.compose.AsyncImage
 import androidx.core.net.toUri
+import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.launch
+import me.saket.squiggles.SquigglySlider
 
 class MainActivity : ComponentActivity() {
     @OptIn(ExperimentalPermissionsApi::class)
@@ -55,6 +59,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+@OptIn(DelicateCoroutinesApi::class)
 @Composable
 fun UtaPlayerApp() {
     val context = LocalContext.current
@@ -72,18 +77,18 @@ fun UtaPlayerApp() {
     //reproductor
     val exoPlayer = remember { ExoPlayer.Builder(context).build() }
 
-    LaunchedEffect(Unit) {
-// Escanegem el disc per si hi ha fitxers nous
-        scanMusic(context) {
-            // Obtenim la música del sistema (MediaStore)
-            val musicFromSystem = fetchSongs(context)
+    val scope = rememberCoroutineScope()
 
-            // La guardem a la nostra base de dades de Room
-            // Fem servir una corrutina perquè insertSongs és 'suspend'
-            kotlinx.coroutines.GlobalScope.launch {
+    LaunchedEffect(Unit) {
+        // Escanegem el disc per si hi ha fitxers nous
+        scanMusic(context) {
+            val musicFromSystem = fetchSongs(context)
+            // fem servir l'scope per guardar les cançons sense que es quedi penjat el dispositiu
+            scope.launch {
                 songDao.insertSongs(musicFromSystem)
             }
-        }    }
+        }
+    }
     //Agafar temps i duracio
     LaunchedEffect(isPlaying) {
         if (isPlaying) {
@@ -196,6 +201,7 @@ fun SongRow(song: Song, onSongClick: (Song) -> Unit) {
 
     }
 }
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PlayerFullScreen(
     song: Song,                  // info de la canço
@@ -217,7 +223,6 @@ fun PlayerFullScreen(
                 .padding(24.dp), // Marges perquè res toqui les vores
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // AQUÍ COMENÇA EL TEU DISSENY
             //boto tancar
             IconButton(onClick = onClose) {
                 //icona boto
@@ -237,22 +242,43 @@ fun PlayerFullScreen(
                 color = MaterialTheme.colorScheme.primaryContainer,
                 shadowElevation = 12.dp
             ) {
-                Box(contentAlignment = Alignment.Center) {
-                    AsyncImage(
-                        model = getAlbumArtUri(song.albumId), // funcio per agafar img
-                        contentDescription = "album img",
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = Crop, // fem que agafi tot el lloc
-                        error = rememberVectorPainter(Icons.Rounded.MusicNote) , // si falla o no te imatge
-                        placeholder = rememberVectorPainter(Icons.Rounded.MusicNote) //mentre carrega
-                    )
-
-                }
+                    Box(contentAlignment = Alignment.Center) {
+                        AsyncImage(
+                            model = getAlbumArtUri(song.albumId), // funcio per agafar img
+                            contentDescription = "album img",
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = Crop, // fem que agafi tot el lloc
+                            error = rememberVectorPainter(Icons.Rounded.MusicNote) , // si falla o no te imatge
+                            placeholder = rememberVectorPainter(Icons.Rounded.MusicNote) //mentre carrega
+                        )
+                    }
             }
-            // 3. Títol i Artista
-            // 4. Slider i Temps
-            // 5. Botons de control
+            //Titol i artista
+            Spacer(Modifier.height(24.dp))
+            Text(song.title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, modifier = Modifier.fillMaxWidth(0.9f))
+            Text(song.artist, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.fillMaxWidth(0.9f))
 
+            //TODO: Posar lyrics aqui entre el titol i els controls
+
+            // 4. Slider i Temps
+            //es per calcular el progress i es necesari per si es 0 que no doni error
+            val progress = if (duration > 0) currentPosition.toFloat() / duration else 0f
+            SquigglySlider(
+                value = progress,
+                onValueChange = { newTime ->
+                    // cuan cliquem anem al nou lloc clicat
+                    onSeek((newTime * duration).toLong())
+                },
+                colors = SliderDefaults.colors( //TODO: Ficar colors de album
+                    thumbColor = MaterialTheme.colorScheme.primary,
+                    activeTrackColor = MaterialTheme.colorScheme.primary,
+                    inactiveTrackColor = MaterialTheme.colorScheme.primaryContainer
+                ),
+                modifier = Modifier //per fer mes gran el en si la barra
+                    .fillMaxWidth(0.6f)
+                    .scale(1.5f)
+                    .padding(vertical = 12.dp),
+            )
         }
     }
 }
