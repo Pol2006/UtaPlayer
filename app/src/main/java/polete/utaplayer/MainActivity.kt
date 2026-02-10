@@ -9,6 +9,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -29,9 +30,11 @@ import polete.utaplayer.ui.theme.UtaplayerTheme
 import androidx.compose.material.icons.*
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
-import androidx.compose.ui.graphics.Color
+import androidx.compose.animation.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale.Companion.Crop
 import androidx.compose.ui.text.font.FontWeight
 import coil.compose.AsyncImage
@@ -60,7 +63,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-@OptIn(DelicateCoroutinesApi::class)
+@OptIn(DelicateCoroutinesApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun UtaPlayerApp() {
     val context = LocalContext.current
@@ -75,10 +78,10 @@ fun UtaPlayerApp() {
     var currentPosition by remember { mutableLongStateOf(0L) } //posicio actual canço
     var duration by remember { mutableLongStateOf(0L) } //duracio canço
     var isFullScreen by remember { mutableStateOf(false) } //pantalla completa
-    //reproductor
-    val exoPlayer = remember { ExoPlayer.Builder(context).build() }
+    val exoPlayer = remember { ExoPlayer.Builder(context).build() }     //reproductor
 
     val scope = rememberCoroutineScope()
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true) //per animacio de lliscar cap abaix
 
     LaunchedEffect(songList) {
         if (songList.isNotEmpty()) {
@@ -149,20 +152,7 @@ fun UtaPlayerApp() {
     }
 
     //visual
-    if (isFullScreen && currentSong != null) {
-        PlayerFullScreen(
-            song = currentSong!!,
-            isPlaying = isPlaying,
-            currentPosition = currentPosition,
-            duration = duration,
-            onClose = { isFullScreen = false },
-            onPlayPause = { if (isPlaying) exoPlayer.pause() else exoPlayer.play() },
-            onSeek = { exoPlayer.seekTo(it) /*per anar al ms que toquin*/ },
-            onNext = { exoPlayer.seekToNext() },
-            onPrevious = { exoPlayer.seekToPrevious() }
-        )
-    }
-    else{
+
         Scaffold(
             bottomBar = {
                 // mostrar playpause menu
@@ -208,9 +198,28 @@ fun UtaPlayerApp() {
                 }
             }
         }
+    if (isFullScreen && currentSong != null) {
+        //animacio per tancar el player
+        ModalBottomSheet(
+            onDismissRequest = { isFullScreen = false }, // Es tanca si toques fora o llisques baix
+            sheetState = sheetState,
+            containerColor = MaterialTheme.colorScheme.background,
+            dragHandle = { BottomSheetDefaults.DragHandle() } // La ratlleta de dalt per estirar
+        ) {
+            PlayerFullScreen(
+                song = currentSong!!,
+                isPlaying = isPlaying,
+                currentPosition = currentPosition,
+                duration = duration,
+                onClose = { isFullScreen = false },
+                onPlayPause = { if (isPlaying) exoPlayer.pause() else exoPlayer.play() },
+                onSeek = { exoPlayer.seekTo(it) /*per anar al ms que toquin*/ },
+                onNext = { exoPlayer.seekToNext() },
+                onPrevious = { exoPlayer.seekToPrevious() }
+            )
+        }
     }
-
-}
+    }
 
 @Composable
 fun SongRow(song: Song, onSongClick: (Song) -> Unit) {
@@ -255,24 +264,17 @@ fun PlayerFullScreen(
 ) {
     // pantalla full screen
     Surface(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier
+            .fillMaxSize(),
         color = MaterialTheme.colorScheme.background // TODO: fer que canvii el color de fons per el del album
     ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .navigationBarsPadding(),
+                .navigationBarsPadding()
+                .verticalScroll(rememberScrollState()), //per que no es quedi pillada l'animacio afegim scroll
                 horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            //boto tancar
-            IconButton(onClick = onClose, Modifier.padding(top = 24.dp)) {
-                //icona boto
-                Icon(
-                    imageVector = Icons.Rounded.KeyboardArrowDown,
-                    contentDescription = "Tencar",
-                    modifier = Modifier.size(32.dp),
-                    tint = MaterialTheme.colorScheme.primary                )
-            }
             //img album
             Surface(
                 modifier = Modifier
