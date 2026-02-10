@@ -30,6 +30,7 @@ import androidx.compose.material.icons.*
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.layout.ContentScale.Companion.Crop
 import androidx.compose.ui.text.font.FontWeight
@@ -188,7 +189,9 @@ fun SongRow(song: Song, onSongClick: (Song) -> Unit) {
                 model = getAlbumArtUri(song.albumId), // funcio per agafar img
                 contentDescription = "album img",
                 contentScale = Crop,
-                modifier = Modifier.size(64.dp).clip(RoundedCornerShape(8.dp)),
+                modifier = Modifier
+                    .size(64.dp)
+                    .clip(RoundedCornerShape(8.dp)),
                 error = rememberVectorPainter(Icons.Rounded.MusicNote) , // si falla o no te imatge
                 placeholder = rememberVectorPainter(Icons.Rounded.MusicNote) //mentre carrega
             )
@@ -220,11 +223,11 @@ fun PlayerFullScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(24.dp), // Marges perquè res toqui les vores
-            horizontalAlignment = Alignment.CenterHorizontally
+                .navigationBarsPadding(),
+                horizontalAlignment = Alignment.CenterHorizontally
         ) {
             //boto tancar
-            IconButton(onClick = onClose) {
+            IconButton(onClick = onClose, Modifier.padding(top = 24.dp)) {
                 //icona boto
                 Icon(
                     imageVector = Icons.Rounded.KeyboardArrowDown,
@@ -237,7 +240,7 @@ fun PlayerFullScreen(
                 modifier = Modifier
                     .fillMaxWidth(0.9f)
                     .aspectRatio(1f)
-                    .padding(top = 16.dp),
+                    .padding(24.dp),
                 shape = RoundedCornerShape(20.dp),
                 color = MaterialTheme.colorScheme.primaryContainer,
                 shadowElevation = 12.dp
@@ -254,37 +257,95 @@ fun PlayerFullScreen(
                     }
             }
             //Titol i artista
-            Spacer(Modifier.height(24.dp))
-            Text(song.title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, modifier = Modifier.fillMaxWidth(0.9f))
-            Text(song.artist, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.fillMaxWidth(0.9f))
+            Text(song.title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, modifier = Modifier.fillMaxWidth(0.9f).padding(start = 24.dp))
+            Text(song.artist, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.fillMaxWidth(0.9f).padding(start = 24.dp))
 
             //TODO: Posar lyrics aqui entre el titol i els controls
 
             // 4. Slider i Temps
             //es per calcular el progress i es necesari per si es 0 que no doni error
             val progress = if (duration > 0) currentPosition.toFloat() / duration else 0f
-            SquigglySlider(
-                value = progress,
-                onValueChange = { newTime ->
-                    // cuan cliquem anem al nou lloc clicat
-                    onSeek((newTime * duration).toLong())
-                },
-                colors = SliderDefaults.colors( //TODO: Ficar colors de album
-                    thumbColor = MaterialTheme.colorScheme.primary,
-                    activeTrackColor = MaterialTheme.colorScheme.primary,
-                    inactiveTrackColor = MaterialTheme.colorScheme.primaryContainer
-                ),
-                modifier = Modifier //per fer mes gran el en si la barra
-                    .fillMaxWidth(0.6f)
-                    .scale(1.5f)
-                    .padding(vertical = 12.dp),
-            )
+
+                SquigglySlider(
+                    value = progress,
+                    onValueChange = { newTime ->
+                        // cuan cliquem anem al nou lloc clicat
+                        onSeek((newTime * duration).toLong())
+                    },
+                    colors = SliderDefaults.colors( //TODO: Ficar colors de album
+                        thumbColor = MaterialTheme.colorScheme.primary,
+                        activeTrackColor = MaterialTheme.colorScheme.primary,
+                        inactiveTrackColor = MaterialTheme.colorScheme.primaryContainer),
+                    modifier = Modifier //per fer mes gran el en si la barra
+                        .padding(horizontal = 30.dp)
+                        .padding(vertical = 12.dp),
+                    squigglesSpec = SquigglySlider.SquigglesSpec(
+                        strokeWidth = 8.dp,
+                        amplitude = if (isPlaying) 8.dp else 0.dp,
+                    )
+
+                )
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth(0.9f)
+                    .weight(1f) // per ocupar tot l'espai possible per que es vegin les lyrics
+                    .padding(start = 24.dp, end = 24.dp)
+
+            ) {
+                // prova
+                Text("lyricssssssssssss", color = MaterialTheme.colorScheme.onBackground)
+            }
+            //Botons de control
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 32.dp),
+                horizontalArrangement = Arrangement.SpaceEvenly, //ajustar tot per igual
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                //aleatori
+                IconButton(onClick = {/*TODO*/}) {
+                    Icon(Icons.Rounded.Shuffle, contentDescription = null, modifier = Modifier.size(24.dp))
+                }
+                //anterior
+                IconButton(onClick = {/*TODO*/}) {
+                    Icon(Icons.Rounded.SkipPrevious, contentDescription = null, modifier = Modifier.size(36.dp))
+                }
+
+                //playpause
+                FilledIconButton(
+                    onClick = onPlayPause,
+                    modifier = Modifier.size(80.dp),
+                    shape = RoundedCornerShape(24.dp),
+                    colors = IconButtonDefaults.filledIconButtonColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                ) {
+                    Icon(
+                        imageVector = if (isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
+                        contentDescription = null,
+                        modifier = Modifier.size(40.dp)
+                    )
+                }
+
+                //seguent
+                IconButton(onClick = {/*TODO*/}) {
+                    Icon(Icons.Rounded.SkipNext, contentDescription = null, modifier = Modifier.size(36.dp))
+                }
+
+                //bucle TODO:Un cop feta la logica canviar icona un cop seleccionat
+                IconButton(onClick = {}) {
+                    Icon(Icons.Rounded.Repeat, contentDescription = null, modifier = Modifier.size(24.dp))
+                }
+            }
+
         }
     }
 }
 @Composable
 fun MiniPlayer(song: Song, isPlaying: Boolean, onPlayPause: () -> Unit) {
-    Surface(tonalElevation = 8.dp, modifier = Modifier.fillMaxWidth()) {
+    Surface(tonalElevation = 8.dp, modifier = Modifier.fillMaxWidth().navigationBarsPadding()) {
         Row(
             modifier = Modifier.padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
