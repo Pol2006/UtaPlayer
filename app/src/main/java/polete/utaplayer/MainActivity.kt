@@ -80,17 +80,44 @@ fun UtaPlayerApp() {
 
     val scope = rememberCoroutineScope()
 
-    LaunchedEffect(Unit) {
-        // Escanegem el disc per si hi ha fitxers nous
-        scanMusic(context) {
-            val musicFromSystem = fetchSongs(context)
-            // fem servir l'scope per guardar les cançons sense que es quedi penjat el dispositiu
-            scope.launch {
-                songDao.insertSongs(musicFromSystem)
+    LaunchedEffect(songList) {
+        if (songList.isNotEmpty()) {
+            // borrem ultima llista
+            exoPlayer.clearMediaItems()
+
+            //pasem de la bdd a exoplayer
+            val mediaItems = songList.map { song ->
+                MediaItem.Builder()
+                    .setMediaId(song.id.toString())
+                    .setUri(song.data.toUri())
+                    .build()
             }
+
+            // li pasem a exoplayer
+            exoPlayer.setMediaItems(mediaItems)
+            exoPlayer.prepare()
         }
     }
-    //Agafar temps i duracio
+    // Escanegem el disc per si hi ha fitxers nous
+    LaunchedEffect(Unit) {
+        scope.launch {
+            // agafem la musica del movil
+            val musicFromSystem = fetchSongs(context)
+
+            if (musicFromSystem.isNotEmpty()) {
+                //actualitzem la llista
+                songDao.syncSongs(musicFromSystem)
+            }
+
+            // mirem si hi ha cançons noves i fem servir l'scope per guardar les cançons sense que es quedi penjat el
+            scanMusic(context) {
+                scope.launch {
+                    val updatedMusic = fetchSongs(context)
+                    songDao.syncSongs(updatedMusic)
+                }
+            }
+        }
+    }    //Agafar temps i duracio
     LaunchedEffect(isPlaying) {
         if (isPlaying) {
             while (true) {
@@ -106,9 +133,16 @@ fun UtaPlayerApp() {
             override fun onIsPlayingChanged(playing: Boolean) {
                 isPlaying = playing
             }
+
+            // Detecta cuando cambia la canción automáticamente
+            override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
+                val idSonant = mediaItem?.mediaId?.toLongOrNull()
+                if (idSonant != null) {
+                    currentSong = songList.find { it.id == idSonant }
+                }
+            }
         })
     }
-
     //tencar exoplayer al tencar app per no consumir
     DisposableEffect(Unit) {
         onDispose { exoPlayer.release() }
@@ -124,6 +158,8 @@ fun UtaPlayerApp() {
             onClose = { isFullScreen = false },
             onPlayPause = { if (isPlaying) exoPlayer.pause() else exoPlayer.play() },
             onSeek = { exoPlayer.seekTo(it) /*per anar al ms que toquin*/ },
+            onNext = { exoPlayer.seekToNext() },
+            onPrevious = { exoPlayer.seekToPrevious() }
         )
     }
     else{
@@ -151,13 +187,12 @@ fun UtaPlayerApp() {
                     SongRow(
                         song = canco,
                         onSongClick = { cancoClicada ->
-                            currentSong = cancoClicada // ho fem servir per la ui per saber quina canço esta sonant
-
-                            // reproduccio exoplayer
-                            val mediaItem = MediaItem.fromUri(cancoClicada.data)
-                            exoPlayer.setMediaItem(mediaItem)
-                            exoPlayer.prepare()
-                            exoPlayer.play()
+                            currentSong = cancoClicada
+                            val index = songList.indexOf(cancoClicada)
+                            if (index != -1) {
+                                exoPlayer.seekTo(index, 0L) // per anar a la canço triada
+                                exoPlayer.play()
+                            }
                         }
                     )
                 }
@@ -213,7 +248,10 @@ fun PlayerFullScreen(
     duration: Long,              // total duracio
     onPlayPause: () -> Unit,     // pausar / reanudar
     onSeek: (Long) -> Unit,      // barra de temps (avisa on ha tocat)
-    onClose: () -> Unit          // tancar
+    onClose: () -> Unit,         // tancar
+    onNext: () -> Unit,          //seguent canço
+    onPrevious: () -> Unit       //anterior canço
+
 ) {
     // pantalla full screen
     Surface(
@@ -308,7 +346,7 @@ fun PlayerFullScreen(
                     Icon(Icons.Rounded.Shuffle, contentDescription = null, modifier = Modifier.size(24.dp))
                 }
                 //anterior
-                IconButton(onClick = {/*TODO*/}) {
+                IconButton(onClick = onPrevious) {
                     Icon(Icons.Rounded.SkipPrevious, contentDescription = null, modifier = Modifier.size(36.dp))
                 }
 
@@ -330,7 +368,7 @@ fun PlayerFullScreen(
                 }
 
                 //seguent
-                IconButton(onClick = {/*TODO*/}) {
+                IconButton(onClick = onNext) {
                     Icon(Icons.Rounded.SkipNext, contentDescription = null, modifier = Modifier.size(36.dp))
                 }
 
