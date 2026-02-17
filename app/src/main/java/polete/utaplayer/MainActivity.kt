@@ -1,5 +1,6 @@
 package polete.utaplayer
 
+import android.content.ComponentName
 import android.content.Context
 import android.media.MediaScannerConnection
 import android.os.Bundle
@@ -22,15 +23,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
-import androidx.media3.exoplayer.ExoPlayer
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
-import com.google.accompanist.permissions.isGranted
-import com.google.accompanist.permissions.rememberPermissionState
 import polete.utaplayer.ui.theme.UtaplayerTheme
 import androidx.compose.material.icons.*
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.ui.draw.clip
-import androidx.compose.animation.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
@@ -39,6 +36,11 @@ import androidx.compose.ui.layout.ContentScale.Companion.Crop
 import androidx.compose.ui.text.font.FontWeight
 import coil.compose.AsyncImage
 import androidx.core.net.toUri
+import androidx.media3.common.MediaMetadata
+import androidx.media3.session.MediaController
+import androidx.media3.session.SessionToken
+import com.google.accompanist.permissions.rememberMultiplePermissionsState
+import com.google.common.util.concurrent.MoreExecutors
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.launch
 import me.saket.squiggles.SquigglySlider
@@ -50,13 +52,22 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             UtaplayerTheme {
-                // Tema permisos
-                val permissionState = rememberPermissionState(android.Manifest.permission.READ_MEDIA_AUDIO)
+                // Pedimos los dos permisos necesarios para Android 13+
+                val permissionsState = rememberMultiplePermissionsState(
+                    permissions = listOf(
+                        android.Manifest.permission.READ_MEDIA_AUDIO,
+                        android.Manifest.permission.POST_NOTIFICATIONS
+                    )
+                )
 
-                if (permissionState.status.isGranted) {
+                // Si ambos están aceptados, entramos a la App
+                if (permissionsState.allPermissionsGranted) {
                     UtaPlayerApp()
                 } else {
-                    PantallaPermisos(onGrantClick = { permissionState.launchPermissionRequest() })
+                    // Si falta alguno, mostramos la pantalla de permisos
+                    PantallaPermisos(onGrantClick = {
+                        permissionsState.launchMultiplePermissionRequest()
+                    })
                 }
             }
         }
@@ -70,35 +81,66 @@ fun UtaPlayerApp() {
 
     val database = remember { AppDatabase.getDatabase(context) } //declarem base de dades
     val songDao = remember { database.songDao() } //declarem el dao
-    //Serveix per mirar la base de dades en temps real
-    val songList by songDao.getAllSongs().collectAsState(emptyList())
-
+    val songList by songDao.getAllSongs().collectAsState(emptyList()) //Serveix per mirar la base de dades en temps real
     var currentSong by remember { mutableStateOf<Song?>(null) } //canço actual
     var isPlaying by remember { mutableStateOf(false) } //saber si esta sonant o no
     var currentPosition by remember { mutableLongStateOf(0L) } //posicio actual canço
     var duration by remember { mutableLongStateOf(0L) } //duracio canço
     var isFullScreen by remember { mutableStateOf(false) } //pantalla completa
-    val exoPlayer = remember { ExoPlayer.Builder(context).build() }     //reproductor
-
     val scope = rememberCoroutineScope()
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true) //per animacio de lliscar cap abaix
 
-    LaunchedEffect(songList) {
-        if (songList.isNotEmpty()) {
-            // borrem ultima llista
-            exoPlayer.clearMediaItems()
+    // Creem un token d'identificacio per conectarnos a AudioPlayerService que fa que el controlador sapiga les ordres de la notificacio i reproduccio
+    val sessionToken = remember {
+        SessionToken(context, ComponentName(context, AudioPlayerService::class.java))
+    }
 
-            //pasem de la bdd a exoplayer
+    //serveix per comunicar la interficie de la notificacio, es null pero al ser mutable, cuan canvii automaticament s'actualitzara
+    var controller by remember { mutableStateOf<MediaController?>(null) }
+
+    //controla la conexio amb el reproductor en segon pla
+    val controllerPeticio = remember {
+        MediaController.Builder(context, sessionToken).buildAsync()
+    }
+
+    DisposableEffect(Unit) {
+        controllerPeticio.addListener({
+            val c = controllerPeticio.get()
+            controller = c
+
+            // Si s'esta reproduint algo cuan obrim la app actualitzem la ui.
+            val mediaId = c.currentMediaItem?.mediaId?.toLongOrNull()
+            if (mediaId != null) {
+                currentSong = songList.find { it.id == mediaId }
+                isPlaying = c.isPlaying
+            }
+                    // Indica que el codi anterior s'ha d'executar immediatament en el mateix fil. (optimitzacio)
+        }, MoreExecutors.directExecutor())
+        //tanca conexio al tencar app
+        onDispose {
+            MediaController.releaseFuture(controllerPeticio)
+        }
+    }
+    // converteix la llista de la bdd a mediaitem i la carrega al reproductor.
+    LaunchedEffect(songList, controller) {
+        val currentController = controller ?: return@LaunchedEffect
+
+        if (songList.isNotEmpty() && currentController.mediaItemCount == 0) {
             val mediaItems = songList.map { song ->
                 MediaItem.Builder()
                     .setMediaId(song.id.toString())
                     .setUri(song.data.toUri())
+                    .setMediaMetadata(
+                        MediaMetadata.Builder()
+                            .setTitle(song.title)
+                            .setArtist(song.artist)
+                            .setArtworkUri(getAlbumArtUri(song.albumId))
+                            .build()
+                    )
                     .build()
             }
-
-            // li pasem a exoplayer
-            exoPlayer.setMediaItems(mediaItems)
-            exoPlayer.prepare()
+            currentController.setMediaItems(mediaItems)
+            currentController.prepare()
         }
     }
     // Escanegem el disc per si hi ha fitxers nous
@@ -121,18 +163,18 @@ fun UtaPlayerApp() {
             }
         }
     }    //Agafar temps i duracio
-    LaunchedEffect(isPlaying) {
-        if (isPlaying) {
+    LaunchedEffect(isPlaying, controller) {
+        if (isPlaying && controller != null) {
             while (true) {
-                currentPosition = exoPlayer.currentPosition
-                duration = exoPlayer.duration.coerceAtLeast(0L) // fer que minim sigui 0
+                currentPosition = controller?.currentPosition?: 0L
+                duration = controller?.duration?.coerceAtLeast(0L)?:0L // fer que minim sigui 0
                 kotlinx.coroutines.delay(1000) // ho fem cada segon
             }
         }
     }
     //listener de exoplayer (necesari) per saber si la musica sona o no
-    LaunchedEffect(exoPlayer) {
-        exoPlayer.addListener(object : Player.Listener {
+    LaunchedEffect(controller) {
+        controller?.addListener(object : Player.Listener {
             override fun onIsPlayingChanged(playing: Boolean) {
                 isPlaying = playing
             }
@@ -146,22 +188,31 @@ fun UtaPlayerApp() {
             }
         })
     }
-    //tencar exoplayer al tencar app per no consumir
-    DisposableEffect(Unit) {
-        onDispose { exoPlayer.release() }
-    }
-
     //visual
 
         Scaffold(
             bottomBar = {
-                // mostrar playpause menu
-                currentSong?.let { song ->
-                    Surface(modifier = Modifier.clickable { isFullScreen = true }) {
-                    MiniPlayer(
-                        song = song,
-                        isPlaying = isPlaying,
-                        onPlayPause = { if (isPlaying) exoPlayer.pause() else exoPlayer.play() }
+                /// Només si NO estem en pantalla completa i hi ha una cançó
+                if (!isFullScreen && currentSong != null) {
+                    val scope = rememberCoroutineScope()
+
+                    Surface(
+                        modifier = Modifier
+                            // afegim el gest de lliscar
+                            .pointerInput(Unit) {
+                                detectVerticalDragGestures { change, dragAmount ->
+                                    // dragAmount es per detectar que el dit puja cap adalt
+                                    if (dragAmount < -15) {
+                                        isFullScreen = true
+                                    }
+                                }
+                            }
+                            .clickable { isFullScreen = true }
+                    ) {
+                        MiniPlayer(
+                            song = currentSong!!,
+                            isPlaying = isPlaying,
+                            onPlayPause = { if (isPlaying) controller?.pause() else controller?.play() }
                         )
                     }
                 }
@@ -180,8 +231,8 @@ fun UtaPlayerApp() {
                             currentSong = cancoClicada
                             val index = songList.indexOf(cancoClicada)
                             if (index != -1) {
-                                exoPlayer.seekTo(index, 0L) // per anar a la canço triada
-                                exoPlayer.play()
+                                controller?.seekTo(index, 0L) // per anar a la canço triada
+                                controller?.play()
                             }
                         }
                     )
@@ -212,10 +263,10 @@ fun UtaPlayerApp() {
                 currentPosition = currentPosition,
                 duration = duration,
                 onClose = { isFullScreen = false },
-                onPlayPause = { if (isPlaying) exoPlayer.pause() else exoPlayer.play() },
-                onSeek = { exoPlayer.seekTo(it) /*per anar al ms que toquin*/ },
-                onNext = { exoPlayer.seekToNext() },
-                onPrevious = { exoPlayer.seekToPrevious() }
+                onPlayPause = { if (isPlaying) controller?.pause() else controller?.play() },
+                onSeek = { controller?.seekTo(it) /*per anar al ms que toquin*/ },
+                onNext = { controller?.seekToNext() },
+                onPrevious = { controller?.seekToPrevious() }
             )
         }
     }
