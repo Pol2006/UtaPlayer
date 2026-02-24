@@ -1,5 +1,6 @@
 package polete.utaplayer
 
+import android.annotation.SuppressLint
 import android.content.ComponentName
 import android.content.Context
 import android.media.MediaScannerConnection
@@ -33,7 +34,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale.Companion.Crop
-import androidx.compose.ui.text.font.FontWeight
 import coil.compose.AsyncImage
 import androidx.core.net.toUri
 import androidx.media3.common.MediaMetadata
@@ -43,7 +43,6 @@ import com.google.accompanist.permissions.rememberMultiplePermissionsState
 import com.google.common.util.concurrent.MoreExecutors
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.launch
-import me.saket.squiggles.SquigglySlider
 
 class MainActivity : ComponentActivity() {
     @OptIn(ExperimentalPermissionsApi::class)
@@ -163,8 +162,16 @@ fun UtaPlayerApp() {
             }
         }
     }    //Agafar temps i duracio
-    LaunchedEffect(isPlaying, controller) {
-        if (isPlaying && controller != null) {
+    LaunchedEffect(isPlaying, controller,currentSong) {
+
+        val c = controller ?: return@LaunchedEffect // Si es null no fem res
+
+        // serveix per el canvi de canço que no es quedi penjada la barra
+        currentPosition = c.currentPosition
+        duration = c.duration.coerceAtLeast(0L)
+
+
+        if (isPlaying) {
             while (true) {
                 currentPosition = controller?.currentPosition?: 0L
                 duration = controller?.duration?.coerceAtLeast(0L)?:0L // fer que minim sigui 0
@@ -194,7 +201,6 @@ fun UtaPlayerApp() {
             bottomBar = {
                 /// Només si NO estem en pantalla completa i hi ha una cançó
                 if (!isFullScreen && currentSong != null) {
-                    val scope = rememberCoroutineScope()
 
                     Surface(
                         modifier = Modifier
@@ -262,9 +268,9 @@ fun UtaPlayerApp() {
                 isPlaying = isPlaying,
                 currentPosition = currentPosition,
                 duration = duration,
-                onClose = { isFullScreen = false },
                 onPlayPause = { if (isPlaying) controller?.pause() else controller?.play() },
-                onSeek = { controller?.seekTo(it) /*per anar al ms que toquin*/ },
+                onSeek = {  currentPosition = it
+                            controller?.seekTo(it) /*per anar al ms que toquin*/ },
                 onNext = { controller?.seekToNext() },
                 onPrevious = { controller?.seekToPrevious() }
             )
@@ -308,7 +314,6 @@ fun PlayerFullScreen(
     duration: Long,              // total duracio
     onPlayPause: () -> Unit,     // pausar / reanudar
     onSeek: (Long) -> Unit,      // barra de temps (avisa on ha tocat)
-    onClose: () -> Unit,         // tancar
     onNext: () -> Unit,          //seguent canço
     onPrevious: () -> Unit       //anterior canço
 
@@ -327,110 +332,21 @@ fun PlayerFullScreen(
                 horizontalAlignment = Alignment.CenterHorizontally
         ) {
             //img album
-            Surface(
-                modifier = Modifier
-                    .fillMaxWidth(0.9f)
-                    .aspectRatio(1f)
-                    .padding(24.dp),
-                shape = RoundedCornerShape(20.dp),
-                color = MaterialTheme.colorScheme.primaryContainer,
-                shadowElevation = 12.dp
-            ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        AsyncImage(
-                            model = getAlbumArtUri(song.albumId), // funcio per agafar img
-                            contentDescription = "album img",
-                            modifier = Modifier.fillMaxSize(),
-                            contentScale = Crop, // fem que agafi tot el lloc
-                            error = rememberVectorPainter(Icons.Rounded.MusicNote) , // si falla o no te imatge
-                            placeholder = rememberVectorPainter(Icons.Rounded.MusicNote) //mentre carrega
-                        )
-                    }
-            }
+            ImgAlbum(song)
             //Titol i artista
-            Text(song.title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, modifier = Modifier.fillMaxWidth(0.9f).padding(start = 24.dp))
-            Text(song.artist, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.fillMaxWidth(0.9f).padding(start = 24.dp))
-
-            //TODO: Posar lyrics aqui entre el titol i els controls
+            TitolArtista(song)
 
             // 4. Slider i Temps
-            //es per calcular el progress i es necesari per si es 0 que no doni error
-            val progress = if (duration > 0) currentPosition.toFloat() / duration else 0f
-
-                SquigglySlider(
-                    value = progress,
-                    onValueChange = { newTime ->
-                        // cuan cliquem anem al nou lloc clicat
-                        onSeek((newTime * duration).toLong())
-                    },
-                    colors = SliderDefaults.colors( //TODO: Ficar colors de album
-                        thumbColor = MaterialTheme.colorScheme.primary,
-                        activeTrackColor = MaterialTheme.colorScheme.primary,
-                        inactiveTrackColor = MaterialTheme.colorScheme.primaryContainer),
-                    modifier = Modifier //per fer mes gran el en si la barra
-                        .padding(horizontal = 30.dp)
-                        .padding(vertical = 12.dp),
-                    squigglesSpec = SquigglySlider.SquigglesSpec(
-                        strokeWidth = 8.dp,
-                        amplitude = if (isPlaying) 8.dp else 0.dp,
-                    )
-
-                )
+            Slider(duration,currentPosition,onSeek,isPlaying)
+            //TODO: Posar lyrics aqui entre el titol i els controls
             Box(
                 modifier = Modifier
-                    .fillMaxWidth(0.9f)
-                    .weight(1f) // per ocupar tot l'espai possible per que es vegin les lyrics
-                    .padding(start = 24.dp, end = 24.dp)
-
-            ) {
-                // prova
-                Text("lyricssssssssssss", color = MaterialTheme.colorScheme.onBackground)
+                    .weight(0.9f)
+            ){
+                Lyrics(TODO())
             }
             //Botons de control
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 32.dp),
-                horizontalArrangement = Arrangement.SpaceEvenly, //ajustar tot per igual
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                //aleatori
-                IconButton(onClick = {/*TODO*/}) {
-                    Icon(Icons.Rounded.Shuffle, contentDescription = null, modifier = Modifier.size(24.dp))
-                }
-                //anterior
-                IconButton(onClick = onPrevious) {
-                    Icon(Icons.Rounded.SkipPrevious, contentDescription = null, modifier = Modifier.size(36.dp))
-                }
-
-                //playpause
-                FilledIconButton(
-                    onClick = onPlayPause,
-                    modifier = Modifier.size(80.dp),
-                    shape = RoundedCornerShape(24.dp),
-                    colors = IconButtonDefaults.filledIconButtonColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer,
-                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
-                ) {
-                    Icon(
-                        imageVector = if (isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
-                        contentDescription = null,
-                        modifier = Modifier.size(40.dp)
-                    )
-                }
-
-                //seguent
-                IconButton(onClick = onNext) {
-                    Icon(Icons.Rounded.SkipNext, contentDescription = null, modifier = Modifier.size(36.dp))
-                }
-
-                //bucle TODO:Un cop feta la logica canviar icona un cop seleccionat
-                IconButton(onClick = {}) {
-                    Icon(Icons.Rounded.Repeat, contentDescription = null, modifier = Modifier.size(24.dp))
-                }
-            }
-
+            BarraBotons(onPrevious,onPlayPause,isPlaying,onNext)
         }
     }
 }
@@ -463,6 +379,7 @@ fun PantallaPermisos(onGrantClick: () -> Unit) {
         Button(onClick = onGrantClick) { Text("Donar permís per veure la música") }
     }
 }
+
 
 //extreure dades
 fun fetchSongs(context: Context): List<Song> {
@@ -517,4 +434,13 @@ fun scanMusic(context: Context, onFinish: () -> Unit) {
     ) { path, uri -> // aixo es per avisar cuan acabi de escanejar
         onFinish()
     }
+}
+
+//fiquem Supress pq no plori
+@SuppressLint("DefaultLocale")
+fun formatTime(ms: Long): String {
+    val totalSeconds = ms / 1000
+    val minutes = totalSeconds / 60
+    val seconds = totalSeconds % 60
+    return String.format("%02d:%02d", minutes, seconds)
 }
