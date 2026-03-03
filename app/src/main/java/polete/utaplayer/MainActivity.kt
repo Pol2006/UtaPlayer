@@ -41,7 +41,9 @@ import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
 import com.google.common.util.concurrent.MoreExecutors
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
@@ -51,7 +53,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             UtaplayerTheme {
-                // Pedimos los dos permisos necesarios para Android 13+
+                // Demanem permisos (Android 13+)
                 val permissionsState = rememberMultiplePermissionsState(
                     permissions = listOf(
                         android.Manifest.permission.READ_MEDIA_AUDIO,
@@ -59,11 +61,11 @@ class MainActivity : ComponentActivity() {
                     )
                 )
 
-                // Si ambos están aceptados, entramos a la App
+                // Si tots els permisos estan acceptats entrem a la app
                 if (permissionsState.allPermissionsGranted) {
                     UtaPlayerApp()
                 } else {
-                    // Si falta alguno, mostramos la pantalla de permisos
+                    // Si falta algun permis el demanem
                     PantallaPermisos(onGrantClick = {
                         permissionsState.launchMultiplePermissionRequest()
                     })
@@ -175,7 +177,7 @@ fun UtaPlayerApp() {
             while (true) {
                 currentPosition = controller?.currentPosition?: 0L
                 duration = controller?.duration?.coerceAtLeast(0L)?:0L // fer que minim sigui 0
-                kotlinx.coroutines.delay(1000) // ho fem cada segon
+                kotlinx.coroutines.delay(32) // ho fem cada segon
             }
         }
     }
@@ -272,7 +274,9 @@ fun UtaPlayerApp() {
                 onSeek = {  currentPosition = it
                             controller?.seekTo(it) /*per anar al ms que toquin*/ },
                 onNext = { controller?.seekToNext() },
-                onPrevious = { controller?.seekToPrevious() }
+                onPrevious = { controller?.seekToPrevious() },
+                songDao = songDao,
+                scope = scope
             )
         }
     }
@@ -315,7 +319,9 @@ fun PlayerFullScreen(
     onPlayPause: () -> Unit,     // pausar / reanudar
     onSeek: (Long) -> Unit,      // barra de temps (avisa on ha tocat)
     onNext: () -> Unit,          //seguent canço
-    onPrevious: () -> Unit       //anterior canço
+    onPrevious: () -> Unit,       //anterior canço
+    songDao: SongDao,
+    scope: CoroutineScope
 
 ) {
     // pantalla full screen
@@ -338,12 +344,17 @@ fun PlayerFullScreen(
 
             // 4. Slider i Temps
             Slider(duration,currentPosition,onSeek,isPlaying)
-            //TODO: Posar lyrics aqui entre el titol i els controls
             Box(
                 modifier = Modifier
                     .weight(0.9f)
             ){
-                Lyrics(TODO())
+                Lyrics(song,currentPosition, onLyricsDownloaded = {nuevasLyrics ->
+                    scope.launch(Dispatchers.IO) {
+                        songDao.updateLyrics(song.id, nuevasLyrics)
+                    }},
+                    onSeek = { milisegundos ->
+                    // moure canço al temps de la lletra
+                    onSeek(milisegundos)})
             }
             //Botons de control
             BarraBotons(onPrevious,onPlayPause,isPlaying,onNext)

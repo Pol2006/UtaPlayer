@@ -70,4 +70,9 @@ dependencies {
     implementation(libs.androidx.room.runtime)
     implementation("me.saket.squigglyslider:squigglyslider:1.0.0")
     ksp(libs.androidx.room.compiler)
+    implementation("androidx.palette:palette-ktx:1.0.0")
+    implementation("com.squareup.retrofit2:retrofit:3.0.0")
+    implementation("com.squareup.retrofit2:converter-gson:3.0.0")
+    implementation("com.mocharealm.accompanist:lyrics-ui:1.0.15")
+    implementation("com.mocharealm.accompanist:lyrics-core:0.2.1") //https://github.com/6xingyv/accompanist-lyrics-ui
 }

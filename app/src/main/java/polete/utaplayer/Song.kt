@@ -9,5 +9,6 @@ data class Song(
     val title: String, //Titol
     val artist: String, //Nom Artista
     val data: String, //Ruta fitxer
-    val duration: Int //Duracio en ms
+    val duration: Int, //Duracio en ms
+    val lyrics: String? = null //lyrics
 )

@@ -9,7 +9,7 @@ interface SongDao {
     @Query("SELECT * FROM songs ORDER BY title ASC")
     fun getAllSongs(): Flow<List<Song>>
     //Per guardar
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertSongs(songs: List<Song>)
     //Per borrar una
     @Delete
@@ -21,6 +21,8 @@ interface SongDao {
     @Query("DELETE FROM songs WHERE id NOT IN (:currentIds)")
     suspend fun deleteOldSongs(currentIds: List<Long>)
 
+    @Query("UPDATE songs SET lyrics = :lyrics WHERE id = :id")
+    suspend fun updateLyrics(id: Long, lyrics: String)
     @Transaction
     suspend fun syncSongs(songs: List<Song>) {
         // obtenim el que te el movil ara
