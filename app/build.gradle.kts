@@ -23,11 +23,24 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+// 1. Activa la optimización y eliminación de código muerto
+            isMinifyEnabled = true
+
+            // 2. Elimina recursos que no uses (imágenes, layouts de librerías, etc.)
+            isShrinkResources = true
+
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+
+            // 3. Importante: Para poder probarla dándole al "Play" sin crear llaves nuevas
+            signingConfig = signingConfigs.getByName("debug")
+
+            // 4. (Opcional) Optimización extra para el rendimiento de inicio
+            ndk {
+                debugSymbolLevel = "none"
+            }
         }
     }
     compileOptions {

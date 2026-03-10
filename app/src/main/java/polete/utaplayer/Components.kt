@@ -1,7 +1,9 @@
 package polete.utaplayer
 
 import android.widget.Toast
+import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -94,7 +96,7 @@ fun ImgAlbum(song: Song){
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun Slider(duration: Long, currentPosition: Long,onSeek: (Long) -> Unit,isPlaying: Boolean){
+fun Slider(duration: Long, currentPosition: Long,onSeek: (Long) -> Unit,isPlaying: Boolean, color: Color){
     //es per calcular el progress i es necesari per si es 0 que no doni error
     val progress = if (duration > 0) currentPosition.toFloat() / duration else 0f
 
@@ -105,10 +107,11 @@ fun Slider(duration: Long, currentPosition: Long,onSeek: (Long) -> Unit,isPlayin
             val newTime = (newProgress * duration).toLong()
             onSeek(newTime)
         },
+        //colors palette
         colors = SliderDefaults.colors( //TODO: Ficar colors de album
-            thumbColor = MaterialTheme.colorScheme.primary,
-            activeTrackColor = MaterialTheme.colorScheme.primary,
-            inactiveTrackColor = MaterialTheme.colorScheme.primaryContainer),
+            thumbColor = color,
+            activeTrackColor = color,
+            inactiveTrackColor = color.copy(alpha = 0.2f)),
         modifier = Modifier //per fer mes gran el en si la barra
             .padding(horizontal = 24.dp),
         squigglesSpec = SquigglySlider.SquigglesSpec(
@@ -222,7 +225,8 @@ fun Lyrics(
                                             val response = RetrofitClient.instance.getLyricsLlista(manualQuery)
                                             //retornem la llista al main
                                             withContext(Dispatchers.Main) { llistaResultat = response }
-                                        } catch (e: Exception) {
+                                            //ficat _ en canvi de e (quick fix de android studio) perque no mostri warning
+                                        } catch (_: Exception) {
                                             withContext(Dispatchers.Main) {
                                                 //per controlar si falles el internet o el servidor
                                                 Toast.makeText(context, "Error de connexió", Toast.LENGTH_SHORT).show()
@@ -336,49 +340,89 @@ fun Lyrics(
     }
 }
 @Composable
-fun BarraBotons(onPrevious: () -> Unit, onPlayPause: () -> Unit, isPlaying: Boolean, onNext: () -> Unit){
-    Row(
+fun BarraBotons(
+    onPrevious: () -> Unit,
+    onPlayPause: () -> Unit,
+    isPlaying: Boolean,
+    onNext: () -> Unit,
+    color: Color
+) {
+    Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(bottom = 32.dp),
-        horizontalArrangement = Arrangement.SpaceEvenly, //ajustar tot per igual
-        verticalAlignment = Alignment.CenterVertically
+            .padding(bottom = 16.dp, start = 16.dp, end = 16.dp)
+            .background(
+                color = color.copy(alpha = 0.1f),
+                shape = RoundedCornerShape(32.dp)
+            )
+            .border(
+                width = 1.dp,
+                color = color.copy(alpha = 0.25f),
+                shape = RoundedCornerShape(32.dp)
+            )
+            .padding(vertical = 8.dp, horizontal = 4.dp)
     ) {
-        //aleatori
-        IconButton(onClick = {/*TODO*/}) {
-            Icon(Icons.Rounded.Shuffle, contentDescription = null, modifier = Modifier.size(24.dp))
-        }
-        //anterior
-        IconButton(onClick = onPrevious) {
-            Icon(Icons.Rounded.SkipPrevious, contentDescription = null, modifier = Modifier.size(36.dp))
-        }
-
-        //playpause
-        FilledIconButton(
-            onClick = onPlayPause,
-            modifier = Modifier.size(80.dp),
-            shape = RoundedCornerShape(24.dp),
-            colors = IconButtonDefaults.filledIconButtonColors(
-                containerColor = MaterialTheme.colorScheme.primaryContainer,
-                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-            )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(
-                imageVector = if (isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
-                contentDescription = null,
-                modifier = Modifier.size(40.dp)
-            )
-        }
+            // Aleatori
+            IconButton(onClick = { /*TODO*/ }) {
+                Icon(
+                    Icons.Rounded.Shuffle,
+                    contentDescription = null,
+                    tint = color.copy(alpha = 0.7f),
+                    modifier = Modifier.size(24.dp)
+                )
+            }
 
-        //seguent
-        IconButton(onClick = onNext) {
-            Icon(Icons.Rounded.SkipNext, contentDescription = null, modifier = Modifier.size(36.dp))
-        }
+            // Anterior
+            IconButton(onClick = onPrevious) {
+                Icon(
+                    Icons.Rounded.SkipPrevious,
+                    contentDescription = null,
+                    tint = color,
+                    modifier = Modifier.size(36.dp)
+                )
+            }
 
-        //bucle TODO:Un cop feta la logica canviar icona un cop seleccionat
-        IconButton(onClick = {}) {
-            Icon(Icons.Rounded.Repeat, contentDescription = null, modifier = Modifier.size(24.dp))
+            // Play/Pause (sin borde propio, ya lo da el contenedor)
+            FilledIconButton(
+                onClick = onPlayPause,
+                modifier = Modifier.size(80.dp),
+                shape = RoundedCornerShape(24.dp),
+                colors = IconButtonDefaults.filledIconButtonColors(
+                    containerColor = color.copy(alpha = 0.2f),
+                    contentColor = color.copy(alpha = 0.9f)
+                )
+            ) {
+                Icon(
+                    imageVector = if (isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
+                    contentDescription = null,
+                    modifier = Modifier.size(40.dp)
+                )
+            }
+
+            // Següent
+            IconButton(onClick = onNext) {
+                Icon(
+                    Icons.Rounded.SkipNext,
+                    contentDescription = null,
+                    tint = color,
+                    modifier = Modifier.size(36.dp)
+                )
+            }
+
+            // Bucle
+            IconButton(onClick = { }) {
+                Icon(
+                    Icons.Rounded.Repeat,
+                    contentDescription = null,
+                    tint = color.copy(alpha = 0.7f),
+                    modifier = Modifier.size(24.dp)
+                )
+            }
         }
     }
-
 }

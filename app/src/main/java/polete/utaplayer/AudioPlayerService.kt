@@ -23,8 +23,8 @@ class AudioPlayerService: MediaSessionService() {
     }
 
     override fun onDestroy() {
-        mediaSession.release()
         player.release()
+        mediaSession.release()
         super.onDestroy()
     }
 }

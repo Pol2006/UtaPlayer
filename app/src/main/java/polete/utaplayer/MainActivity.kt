@@ -9,6 +9,8 @@ import android.provider.MediaStore
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
@@ -31,6 +33,11 @@ import androidx.compose.material.icons.rounded.*
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.graphics.BlurEffect
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.TileMode
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale.Companion.Crop
@@ -45,6 +52,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class MainActivity : ComponentActivity() {
     @OptIn(ExperimentalPermissionsApi::class)
@@ -90,6 +98,7 @@ fun UtaPlayerApp() {
     var isFullScreen by remember { mutableStateOf(false) } //pantalla completa
     val scope = rememberCoroutineScope()
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true) //per animacio de lliscar cap abaix
+    var mediaItemsLoaded by remember { mutableStateOf(false) }
 
     // Creem un token d'identificacio per conectarnos a AudioPlayerService que fa que el controlador sapiga les ordres de la notificacio i reproduccio
     val sessionToken = remember {
@@ -100,10 +109,9 @@ fun UtaPlayerApp() {
     var controller by remember { mutableStateOf<MediaController?>(null) }
 
     //controla la conexio amb el reproductor en segon pla
-    val controllerPeticio = remember {
-        MediaController.Builder(context, sessionToken).buildAsync()
-    }
+    val controllerPeticio = remember { MediaController.Builder(context, sessionToken).buildAsync() }
 
+    //es com un LaunchedEffect pero al tencar la app anira al ondispose
     DisposableEffect(Unit) {
         controllerPeticio.addListener({
             val c = controllerPeticio.get()
@@ -125,61 +133,72 @@ fun UtaPlayerApp() {
     // converteix la llista de la bdd a mediaitem i la carrega al reproductor.
     LaunchedEffect(songList, controller) {
         val currentController = controller ?: return@LaunchedEffect
+        if (songList.isEmpty() || mediaItemsLoaded) return@LaunchedEffect
 
-        if (songList.isNotEmpty() && currentController.mediaItemCount == 0) {
-            val mediaItems = songList.map { song ->
-                MediaItem.Builder()
-                    .setMediaId(song.id.toString())
-                    .setUri(song.data.toUri())
-                    .setMediaMetadata(
-                        MediaMetadata.Builder()
-                            .setTitle(song.title)
-                            .setArtist(song.artist)
-                            .setArtworkUri(getAlbumArtUri(song.albumId))
-                            .build()
-                    )
-                    .build()
+            val mediaItems = withContext(Dispatchers.Default) {
+                songList.map { song ->
+                    MediaItem.Builder()
+                        .setMediaId(song.id.toString())
+                        .setUri(song.data.toUri())
+                        .setMediaMetadata(
+                            MediaMetadata.Builder()
+                                .setTitle(song.title)
+                                .setArtist(song.artist)
+                                .setArtworkUri(getAlbumArtUri(song.albumId))
+                                .build()
+                        )
+                        .build()
+                }
             }
             currentController.setMediaItems(mediaItems)
             currentController.prepare()
-        }
+            mediaItemsLoaded = true
     }
     // Escanegem el disc per si hi ha fitxers nous
     LaunchedEffect(Unit) {
-        scope.launch {
-            // agafem la musica del movil
+        withContext(Dispatchers.IO) {
+            // nomes mira el disc si la bd esta buida
             val musicFromSystem = fetchSongs(context)
 
-            if (musicFromSystem.isNotEmpty()) {
-                //actualitzem la llista
+            if (songDao.getCount() != musicFromSystem.size) {
+                // si no es igual el disc del que tenim mirem
                 songDao.syncSongs(musicFromSystem)
             }
 
-            // mirem si hi ha cançons noves i fem servir l'scope per guardar les cançons sense que es quedi penjat el
+            // scanMusic solo para detectar archivos MUY nuevos
             scanMusic(context) {
-                scope.launch {
+                scope.launch(Dispatchers.IO) {
                     val updatedMusic = fetchSongs(context)
-                    songDao.syncSongs(updatedMusic)
+                    if (updatedMusic.size != musicFromSystem.size) {
+                        songDao.syncSongs(updatedMusic)
+                    }
                 }
             }
         }
-    }    //Agafar temps i duracio
-    LaunchedEffect(isPlaying, controller,currentSong) {
+    }
+    // Serveix per actualitzar dades canço (lyrics) quan canvia la bdd
+    LaunchedEffect(songList) {
+        val id = currentSong?.id ?: return@LaunchedEffect
+        currentSong = songList.find { it.id == id }
+    }
 
+    //Agafar temps i duracio
+    LaunchedEffect(isPlaying, isFullScreen) {
+        if (isPlaying) {
+            while (true) {
+                currentPosition = controller?.currentPosition?: 0L
+                duration = controller?.duration?.coerceAtLeast(0L)?:0L // fer que minim sigui 0
+                kotlinx.coroutines.delay(if (isFullScreen) 32L else 500L)
+            }
+        }
+    }
+
+    LaunchedEffect(controller, currentSong) {
         val c = controller ?: return@LaunchedEffect // Si es null no fem res
 
         // serveix per el canvi de canço que no es quedi penjada la barra
         currentPosition = c.currentPosition
         duration = c.duration.coerceAtLeast(0L)
-
-
-        if (isPlaying) {
-            while (true) {
-                currentPosition = controller?.currentPosition?: 0L
-                duration = controller?.duration?.coerceAtLeast(0L)?:0L // fer que minim sigui 0
-                kotlinx.coroutines.delay(32) // ho fem cada segon
-            }
-        }
     }
     //listener de exoplayer (necesari) per saber si la musica sona o no
     LaunchedEffect(controller) {
@@ -187,6 +206,7 @@ fun UtaPlayerApp() {
             override fun onIsPlayingChanged(playing: Boolean) {
                 isPlaying = playing
             }
+
 
             // Detecta cuando cambia la canción automáticamente
             override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
@@ -232,7 +252,7 @@ fun UtaPlayerApp() {
                 .padding(padding)
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.primaryContainer)) {
-                items(songList) { canco ->
+                items(songList,key = { it.id }) { canco ->
                     SongRow(
                         song = canco,
                         onSongClick = { cancoClicada ->
@@ -263,7 +283,8 @@ fun UtaPlayerApp() {
             onDismissRequest = { isFullScreen = false }, // Es tanca si toques fora o llisques baix
             sheetState = sheetState,
             containerColor = MaterialTheme.colorScheme.background,
-            dragHandle = { BottomSheetDefaults.DragHandle() } // La ratlleta de dalt per estirar
+            tonalElevation = 0.dp,
+            dragHandle = { BottomSheetDefaults.DragHandle()  } // La ratlleta de dalt per estirar
         ) {
             PlayerFullScreen(
                 song = currentSong!!,
@@ -276,7 +297,8 @@ fun UtaPlayerApp() {
                 onNext = { controller?.seekToNext() },
                 onPrevious = { controller?.seekToPrevious() },
                 songDao = songDao,
-                scope = scope
+                scope = scope,
+
             )
         }
     }
@@ -324,16 +346,31 @@ fun PlayerFullScreen(
     scope: CoroutineScope
 
 ) {
+    val accentColor = agafarPaletteColor(song.albumId)
     // pantalla full screen
-    Surface(
-        modifier = Modifier
-            .fillMaxSize(),
-        color = MaterialTheme.colorScheme.background // TODO: fer que canvii el color de fons per el del album
-    ) {
+    Box(modifier = Modifier.fillMaxSize()) {
+        AsyncImage(
+            model = getAlbumArtUri(song.albumId),
+            contentDescription = "album img",
+            modifier = Modifier
+                .fillMaxSize()
+                //fem servir graphicslayer perque es renderitzi a la gpu
+                .graphicsLayer {
+                    renderEffect = BlurEffect(
+                        radiusX = 60f, // intensitat blur
+                        radiusY = 60f,
+                        edgeTreatment = TileMode.Clamp // per evitar contorns transparents
+                    )
+                    //perque no surti de la pantalla
+                    clip = true
+                },
+            contentScale = Crop, //per ocupar tota la pantalla
+            alpha = 0.5f // rebaixem una mica mes la imatge
+        )
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .navigationBarsPadding()
                 .verticalScroll(rememberScrollState()), //per que no es quedi pillada l'animacio afegim scroll
                 horizontalAlignment = Alignment.CenterHorizontally
         ) {
@@ -343,7 +380,7 @@ fun PlayerFullScreen(
             TitolArtista(song)
 
             // 4. Slider i Temps
-            Slider(duration,currentPosition,onSeek,isPlaying)
+            Slider(duration,currentPosition,onSeek,isPlaying,accentColor)
             Box(
                 modifier = Modifier
                     .weight(0.9f)
@@ -357,7 +394,7 @@ fun PlayerFullScreen(
                     onSeek(milisegundos)})
             }
             //Botons de control
-            BarraBotons(onPrevious,onPlayPause,isPlaying,onNext)
+            BarraBotons(onPrevious,onPlayPause,isPlaying,onNext,accentColor)
         }
     }
 }
@@ -454,4 +491,51 @@ fun formatTime(ms: Long): String {
     val minutes = totalSeconds / 60
     val seconds = totalSeconds % 60
     return String.format("%02d:%02d", minutes, seconds)
+}
+
+@Composable
+fun agafarPaletteColor(albumId: Long): Color {
+    val context = LocalContext.current
+    val albumArtUri = getAlbumArtUri(albumId)
+
+    // Color per defecte si no hi ha portada
+    val fallbackColor = MaterialTheme.colorScheme.primaryContainer
+    var accentColor by remember(albumId) { mutableStateOf(fallbackColor) }
+
+    //fem que el color no canvii de cop
+    val animatedColor by animateColorAsState(
+        targetValue = accentColor,
+        animationSpec = tween(durationMillis = 600), // 600ms de transicio suau
+        label = "transicio_color"
+    )
+    //per agafar el color de la imatge
+    LaunchedEffect(albumId) {
+        val loader = coil.Coil.imageLoader(context)
+        val request = coil.request.ImageRequest.Builder(context)
+            .data(albumArtUri)
+            .allowHardware(false)
+            .build()
+
+        val result = loader.execute(request)
+        if (result is coil.request.SuccessResult) {
+            val bitmap = (result.drawable as android.graphics.drawable.BitmapDrawable).bitmap
+            androidx.palette.graphics.Palette.from(bitmap).generate { palette ->
+                val swatch = palette?.dominantSwatch
+
+                swatch?.let {
+                    val color = Color(it.rgb)
+                    //Si el color és massa fosc agafem un mes clar
+                    accentColor = if (it.hsl[2] < 0.2f) {
+                        Color(palette.lightVibrantSwatch?.rgb ?: fallbackColor.toArgb())
+                    } else {
+                        color
+                    }
+                }
+            }
+        } else {
+            // si no hi ha portada tornem al color per defecte
+            accentColor = fallbackColor
+        }
+    }
+    return animatedColor
 }

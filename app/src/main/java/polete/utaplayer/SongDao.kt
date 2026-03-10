@@ -23,6 +23,9 @@ interface SongDao {
 
     @Query("UPDATE songs SET lyrics = :lyrics WHERE id = :id")
     suspend fun updateLyrics(id: Long, lyrics: String)
+
+    @Query("SELECT COUNT(*) FROM songs")
+    suspend fun getCount(): Int
     @Transaction
     suspend fun syncSongs(songs: List<Song>) {
         // obtenim el que te el movil ara
