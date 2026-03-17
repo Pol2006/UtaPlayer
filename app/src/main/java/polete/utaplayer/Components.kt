@@ -108,7 +108,7 @@ fun Slider(duration: Long, currentPosition: Long,onSeek: (Long) -> Unit,isPlayin
             onSeek(newTime)
         },
         //colors palette
-        colors = SliderDefaults.colors( //TODO: Ficar colors de album
+        colors = SliderDefaults.colors(
             thumbColor = color,
             activeTrackColor = color,
             inactiveTrackColor = color.copy(alpha = 0.2f)),

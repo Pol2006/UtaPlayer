@@ -12,9 +12,11 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -41,6 +43,7 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale.Companion.Crop
+import androidx.compose.ui.text.style.TextAlign
 import coil.compose.AsyncImage
 import androidx.core.net.toUri
 import androidx.media3.common.MediaMetadata
@@ -135,7 +138,7 @@ fun UtaPlayerApp() {
         val currentController = controller ?: return@LaunchedEffect
         if (songList.isEmpty() || mediaItemsLoaded) return@LaunchedEffect
 
-            val mediaItems = withContext(Dispatchers.Default) {
+        val mediaItems = withContext(Dispatchers.Default) {
                 songList.map { song ->
                     MediaItem.Builder()
                         .setMediaId(song.id.toString())
@@ -247,61 +250,63 @@ fun UtaPlayerApp() {
             }
         ) { padding ->
             // llistar cançons
-            if(songList.isNotEmpty())
-            LazyColumn(modifier = Modifier
-                .padding(padding)
-                .fillMaxSize()
-                .background(MaterialTheme.colorScheme.primaryContainer)) {
-                items(songList,key = { it.id }) { canco ->
-                    SongRow(
-                        song = canco,
-                        onSongClick = { cancoClicada ->
-                            currentSong = cancoClicada
-                            val index = songList.indexOf(cancoClicada)
-                            if (index != -1) {
-                                controller?.seekTo(index, 0L) // per anar a la canço triada
-                                controller?.play()
+                Surface {
+                    if(songList.isNotEmpty())
+                        LazyColumn(modifier = Modifier
+                            .padding(padding)
+                            .fillMaxSize()
+                            .background(MaterialTheme.colorScheme.surface)) {
+                            items(songList,key = { it.id }) { canco ->
+                                SongRow(
+                                    song = canco,
+                                    onSongClick = { cancoClicada ->
+                                        currentSong = cancoClicada
+                                        val index = songList.indexOf(cancoClicada)
+                                        if (index != -1) {
+                                            controller?.seekTo(index, 0L) // per anar a la canço triada
+                                            controller?.play()
+                                        }
+                                    }
+                                )
                             }
                         }
-                    )
+                    else{
+                        Box(
+                            modifier = Modifier
+                                .padding(padding)
+                                .fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("No s'ha trobat cap cançó")
+                        }
+                    }
                 }
-            }
-            else{
-                Box(
-                    modifier = Modifier
-                        .padding(padding)
-                        .fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text("No s'ha trobat cap cançó")
-                }
-            }
-        }
-    if (isFullScreen && currentSong != null) {
-        //animacio per tancar el player
-        ModalBottomSheet(
-            onDismissRequest = { isFullScreen = false }, // Es tanca si toques fora o llisques baix
-            sheetState = sheetState,
-            containerColor = MaterialTheme.colorScheme.background,
-            tonalElevation = 0.dp,
-            dragHandle = { BottomSheetDefaults.DragHandle()  } // La ratlleta de dalt per estirar
-        ) {
-            PlayerFullScreen(
-                song = currentSong!!,
-                isPlaying = isPlaying,
-                currentPosition = currentPosition,
-                duration = duration,
-                onPlayPause = { if (isPlaying) controller?.pause() else controller?.play() },
-                onSeek = {  currentPosition = it
-                            controller?.seekTo(it) /*per anar al ms que toquin*/ },
-                onNext = { controller?.seekToNext() },
-                onPrevious = { controller?.seekToPrevious() },
-                songDao = songDao,
-                scope = scope,
+                if (isFullScreen && currentSong != null) {
+                    //animacio per tancar el player
+                    ModalBottomSheet(
+                        onDismissRequest = { isFullScreen = false }, // Es tanca si toques fora o llisques baix
+                        sheetState = sheetState,
+                        containerColor = MaterialTheme.colorScheme.background,
+                        tonalElevation = 0.dp,
+                        dragHandle = { BottomSheetDefaults.DragHandle()  } // La ratlleta de dalt per estirar
+                    ) {
+                        PlayerFullScreen(
+                            song = currentSong!!,
+                            isPlaying = isPlaying,
+                            currentPosition = currentPosition,
+                            duration = duration,
+                            onPlayPause = { if (isPlaying) controller?.pause() else controller?.play() },
+                            onSeek = {  currentPosition = it
+                                controller?.seekTo(it) /*per anar al ms que toquin*/ },
+                            onNext = { controller?.seekToNext() },
+                            onPrevious = { controller?.seekToPrevious() },
+                            songDao = songDao,
+                            scope = scope,
 
-            )
+                        )
+                    }
+                }
         }
-    }
     }
 
 @Composable
@@ -310,22 +315,27 @@ fun SongRow(song: Song, onSongClick: (Song) -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onSongClick(song) } // tornem canço
-            .padding(16.dp)
+            .padding(4.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .background(color = MaterialTheme.colorScheme.surfaceVariant),
+            verticalAlignment = Alignment.CenterVertically
+
     ) {
             AsyncImage(
                 model = getAlbumArtUri(song.albumId), // funcio per agafar img
                 contentDescription = "album img",
                 contentScale = Crop,
                 modifier = Modifier
-                    .size(64.dp)
+                    .size(80.dp)
                     .clip(RoundedCornerShape(8.dp)),
                 error = rememberVectorPainter(Icons.Rounded.MusicNote) , // si falla o no te imatge
                 placeholder = rememberVectorPainter(Icons.Rounded.MusicNote) //mentre carrega
             )
-        Spacer(Modifier.width(16.dp))
+        Spacer(Modifier.padding(4.dp))
+
         Column(modifier = Modifier.weight(1f)) {
-            Text(text = song.title, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onPrimaryContainer)
-            Text(text = song.artist, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onPrimaryContainer)
+            Text(text = song.title, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface, maxLines = 1, modifier = Modifier.basicMarquee(Int.MAX_VALUE, repeatDelayMillis = 2500))
+            Text(text = song.artist, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1,modifier = Modifier.basicMarquee(Int.MAX_VALUE, repeatDelayMillis = 2000))
 
         }
 
