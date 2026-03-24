@@ -42,6 +42,7 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale.Companion.Crop
+import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import androidx.core.net.toUri
 import androidx.media3.common.MediaMetadata
@@ -354,7 +355,7 @@ fun SongRow(song: Song, onSongClick: (Song) -> Unit, currentSong: Song?) {
         Spacer(Modifier.padding(4.dp))
 
         Column(modifier = Modifier.weight(1f)) {
-            Text(text = song.title, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface, maxLines = 1, modifier = Modifier.basicMarquee(Int.MAX_VALUE, repeatDelayMillis = 2500))
+            Text(text = song.title, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface, maxLines = 1, modifier = Modifier.basicMarquee(Int.MAX_VALUE, repeatDelayMillis = 2500))
             if(song.artist != "")Text(text = song.artist, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1,modifier = Modifier.basicMarquee(Int.MAX_VALUE, repeatDelayMillis = 2000))
 
         }
@@ -377,28 +378,26 @@ fun PlayerFullScreen(
 
 ) {
     // colors
-    val targetColors = agafarEsquemaColors(song.albumId)
+    val colors = agafarEsquemaColors(song.albumId)
 
     //animem els colors perque no es vegi un canvi directe
     val animatedSurface by animateColorAsState(
-        targetValue = targetColors.surfaceVariant,
+        targetValue = colors.surfaceVariant,
         animationSpec = tween(1000),
     )
     val animatedContainer by animateColorAsState(
-        targetValue = targetColors.primaryContainer,
+        targetValue = colors.primaryContainer,
         animationSpec = tween(1000),
     )
     val animatedPrimary by animateColorAsState(
-        targetValue = targetColors.primary,
+        targetValue = colors.primary,
         animationSpec = tween(1000),
     )
 
     //calcular el color per la animacio amb lerp (interpolacio lineal) per barrejar els 2 colors animats
     val animatedPastel = lerp(animatedSurface, animatedContainer, 0.5f)
 
-    val colors = agafarEsquemaColors(song.albumId)
     // pantalla full screen
-    val pastelColor = lerp(colors.surfaceVariant, colors.primaryContainer, 0.5f)
     Box(modifier = Modifier.fillMaxSize().background(animatedPastel)) {
 
         Column(
