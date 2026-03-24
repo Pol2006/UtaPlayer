@@ -3,6 +3,7 @@ package polete.utaplayer
 import android.annotation.SuppressLint
 import android.content.ComponentName
 import android.content.Context
+import android.graphics.drawable.BitmapDrawable
 import android.media.MediaScannerConnection
 import android.os.Bundle
 import android.provider.MediaStore
@@ -16,7 +17,6 @@ import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -34,28 +34,30 @@ import androidx.compose.material.icons.*
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.ui.graphics.BlurEffect
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.TileMode
-import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale.Companion.Crop
-import androidx.compose.ui.text.style.TextAlign
 import coil.compose.AsyncImage
 import androidx.core.net.toUri
 import androidx.media3.common.MediaMetadata
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
+import androidx.palette.graphics.Palette
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
 import com.google.common.util.concurrent.MoreExecutors
+import com.materialkolor.PaletteStyle
+import com.materialkolor.rememberDynamicColorScheme
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+
 
 class MainActivity : ComponentActivity() {
     @OptIn(ExperimentalPermissionsApi::class)
@@ -122,7 +124,7 @@ fun UtaPlayerApp() {
 
             // Si s'esta reproduint algo cuan obrim la app actualitzem la ui.
             val mediaId = c.currentMediaItem?.mediaId?.toLongOrNull()
-            if (mediaId != null) {
+            if (mediaId != null && c.isPlaying) {
                 currentSong = songList.find { it.id == mediaId }
                 isPlaying = c.isPlaying
             }
@@ -138,6 +140,7 @@ fun UtaPlayerApp() {
         val currentController = controller ?: return@LaunchedEffect
         if (songList.isEmpty() || mediaItemsLoaded) return@LaunchedEffect
 
+        if (currentController.mediaItemCount == 0) {
         val mediaItems = withContext(Dispatchers.Default) {
                 songList.map { song ->
                     MediaItem.Builder()
@@ -154,7 +157,15 @@ fun UtaPlayerApp() {
                 }
             }
             currentController.setMediaItems(mediaItems)
-            currentController.prepare()
+        }
+        else {
+            //si venim de tancar la app i tenim musica busquem quina es perque surti el miniplayer
+            val idSonant = currentController.currentMediaItem?.mediaId?.toLongOrNull()
+            if (idSonant != null && currentController.isPlaying) {
+                currentSong = songList.find { it.id == idSonant }
+                isPlaying = currentController.isPlaying
+            }
+        }
             mediaItemsLoaded = true
     }
     // Escanegem el disc per si hi ha fitxers nous
@@ -215,7 +226,9 @@ fun UtaPlayerApp() {
             override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
                 val idSonant = mediaItem?.mediaId?.toLongOrNull()
                 if (idSonant != null) {
-                    currentSong = songList.find { it.id == idSonant }
+                    if (reason != Player.MEDIA_ITEM_TRANSITION_REASON_PLAYLIST_CHANGED) {
+                        currentSong = songList.find { it.id == idSonant }
+                    }
                 }
             }
         })
@@ -223,6 +236,7 @@ fun UtaPlayerApp() {
     //visual
 
         Scaffold(
+            containerColor = Color.Transparent,
             bottomBar = {
                 /// Només si NO estem en pantalla completa i hi ha una cançó
                 if (!isFullScreen && currentSong != null) {
@@ -233,29 +247,31 @@ fun UtaPlayerApp() {
                             .pointerInput(Unit) {
                                 detectVerticalDragGestures { change, dragAmount ->
                                     // dragAmount es per detectar que el dit puja cap adalt
-                                    if (dragAmount < -15) {
-                                        isFullScreen = true
-                                    }
-                                }
-                            }
-                            .clickable { isFullScreen = true }
+                                    if (dragAmount < -15) { isFullScreen = true } } }
+                            .clickable { isFullScreen = true },
+                        color = Color.Transparent
                     ) {
                         MiniPlayer(
                             song = currentSong!!,
                             isPlaying = isPlaying,
-                            onPlayPause = { if (isPlaying) controller?.pause() else controller?.play() }
-                        )
+                            onPlayPause = { if (isPlaying) controller?.pause() else controller?.play() },
+                            onNext = { controller?.seekToNext() },
+                            onPrevious = { controller?.seekToPrevious() },
+                            currentPosition = currentPosition,
+                            duration = duration
+                            )
                     }
                 }
             }
         ) { padding ->
+
             // llistar cançons
                 Surface {
                     if(songList.isNotEmpty())
                         LazyColumn(modifier = Modifier
                             .padding(padding)
                             .fillMaxSize()
-                            .background(MaterialTheme.colorScheme.surface)) {
+                            .background(color = Color.Transparent)) {
                             items(songList,key = { it.id }) { canco ->
                                 SongRow(
                                     song = canco,
@@ -264,9 +280,11 @@ fun UtaPlayerApp() {
                                         val index = songList.indexOf(cancoClicada)
                                         if (index != -1) {
                                             controller?.seekTo(index, 0L) // per anar a la canço triada
+                                            controller?.prepare()
                                             controller?.play()
                                         }
-                                    }
+                                    },
+                                    currentSong = currentSong,
                                 )
                             }
                         }
@@ -310,14 +328,16 @@ fun UtaPlayerApp() {
     }
 
 @Composable
-fun SongRow(song: Song, onSongClick: (Song) -> Unit) {
+fun SongRow(song: Song, onSongClick: (Song) -> Unit, currentSong: Song?) {
+    val colors = agafarEsquemaColors(song.albumId)
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onSongClick(song) } // tornem canço
             .padding(4.dp)
             .clip(RoundedCornerShape(16.dp))
-            .background(color = MaterialTheme.colorScheme.surfaceVariant),
+            .background(color = if(song == currentSong) colors.primary.copy(alpha = 0.15f) else MaterialTheme.colorScheme.surfaceVariant),
             verticalAlignment = Alignment.CenterVertically
 
     ) {
@@ -335,7 +355,7 @@ fun SongRow(song: Song, onSongClick: (Song) -> Unit) {
 
         Column(modifier = Modifier.weight(1f)) {
             Text(text = song.title, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface, maxLines = 1, modifier = Modifier.basicMarquee(Int.MAX_VALUE, repeatDelayMillis = 2500))
-            Text(text = song.artist, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1,modifier = Modifier.basicMarquee(Int.MAX_VALUE, repeatDelayMillis = 2000))
+            if(song.artist != "")Text(text = song.artist, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1,modifier = Modifier.basicMarquee(Int.MAX_VALUE, repeatDelayMillis = 2000))
 
         }
 
@@ -356,27 +376,30 @@ fun PlayerFullScreen(
     scope: CoroutineScope
 
 ) {
-    val accentColor = agafarPaletteColor(song.albumId)
+    // colors
+    val targetColors = agafarEsquemaColors(song.albumId)
+
+    //animem els colors perque no es vegi un canvi directe
+    val animatedSurface by animateColorAsState(
+        targetValue = targetColors.surfaceVariant,
+        animationSpec = tween(1000),
+    )
+    val animatedContainer by animateColorAsState(
+        targetValue = targetColors.primaryContainer,
+        animationSpec = tween(1000),
+    )
+    val animatedPrimary by animateColorAsState(
+        targetValue = targetColors.primary,
+        animationSpec = tween(1000),
+    )
+
+    //calcular el color per la animacio amb lerp (interpolacio lineal) per barrejar els 2 colors animats
+    val animatedPastel = lerp(animatedSurface, animatedContainer, 0.5f)
+
+    val colors = agafarEsquemaColors(song.albumId)
     // pantalla full screen
-    Box(modifier = Modifier.fillMaxSize()) {
-        AsyncImage(
-            model = getAlbumArtUri(song.albumId),
-            contentDescription = "album img",
-            modifier = Modifier
-                .fillMaxSize()
-                //fem servir graphicslayer perque es renderitzi a la gpu
-                .graphicsLayer {
-                    renderEffect = BlurEffect(
-                        radiusX = 60f, // intensitat blur
-                        radiusY = 60f,
-                        edgeTreatment = TileMode.Clamp // per evitar contorns transparents
-                    )
-                    //perque no surti de la pantalla
-                    clip = true
-                },
-            contentScale = Crop, //per ocupar tota la pantalla
-            alpha = 0.5f // rebaixem una mica mes la imatge
-        )
+    val pastelColor = lerp(colors.surfaceVariant, colors.primaryContainer, 0.5f)
+    Box(modifier = Modifier.fillMaxSize().background(animatedPastel)) {
 
         Column(
             modifier = Modifier
@@ -387,50 +410,116 @@ fun PlayerFullScreen(
             //img album
             ImgAlbum(song)
             //Titol i artista
-            TitolArtista(song)
+            TitolArtista(song, colors)
 
             // 4. Slider i Temps
-            Slider(duration,currentPosition,onSeek,isPlaying,accentColor)
+            Slider(duration,currentPosition,onSeek,isPlaying,colors)
             Box(
                 modifier = Modifier
                     .weight(0.9f)
             ){
-                Lyrics(song,currentPosition, onLyricsDownloaded = {nuevasLyrics ->
+                Lyrics(song,currentPosition, onLyricsDownloaded = {lyrics ->
                     scope.launch(Dispatchers.IO) {
-                        songDao.updateLyrics(song.id, nuevasLyrics)
+                        songDao.updateLyrics(song.id, lyrics)
                     }},
                     onSeek = { milisegundos ->
                     // moure canço al temps de la lletra
-                    onSeek(milisegundos)})
+                    onSeek(milisegundos)}, colors = colors)
             }
             //Botons de control
-            BarraBotons(onPrevious,onPlayPause,isPlaying,onNext,accentColor)
+            BarraBotons(onPrevious,onPlayPause,isPlaying,onNext,colors.primary)
         }
     }
 }
 @Composable
-fun MiniPlayer(song: Song, isPlaying: Boolean, onPlayPause: () -> Unit) {
-    Surface(tonalElevation = 8.dp, modifier = Modifier.fillMaxWidth().navigationBarsPadding()) {
+fun MiniPlayer(song: Song, isPlaying: Boolean, onPlayPause: () -> Unit, onNext: () -> Unit, onPrevious: () -> Unit, currentPosition: Long, duration: Long) {
+    val colors = agafarEsquemaColors(song.albumId)
+    val progress = if (duration > 0) currentPosition.toFloat() / duration.toFloat() else 0f
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .navigationBarsPadding()
+            .background(colors.primary.copy(alpha = 0.15f))
+    ) {
+        // barra de progres al fons
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(3.dp)
+                .background(colors.primary.copy(alpha = 0.2f))
+                .align(Alignment.BottomStart)
+        )
+        Box(
+            modifier = Modifier
+                .fillMaxWidth(progress)
+                .height(3.dp)
+                .background(colors.primary)
+                .align(Alignment.BottomStart)
+        )
+
         Row(
-            modifier = Modifier.padding(16.dp),
+            modifier = Modifier.padding(start = 10.dp, end = 12.dp, top = 10.dp, bottom = 14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(text = song.title, maxLines = 1)
-                Text(text = song.artist, style = MaterialTheme.typography.bodySmall)
+            AsyncImage(
+                model = getAlbumArtUri(song.albumId), // funcio per agafar img
+                contentDescription = "album img",
+                contentScale = Crop,
+                modifier = Modifier
+                    .size(52.dp)
+                    .clip(RoundedCornerShape(10.dp)),
+                error = rememberVectorPainter(Icons.Rounded.MusicNote), // si falla o no te imatge
+                placeholder = rememberVectorPainter(Icons.Rounded.MusicNote) //mentre carrega
+            )
+
+            Column(modifier = Modifier.weight(1f).padding(start = 12.dp)) {
+                Text(text = song.title, maxLines = 1, color = Color.White,
+                    modifier = Modifier.basicMarquee(Int.MAX_VALUE, repeatDelayMillis = 2500))
+                Text(text = song.artist, style = MaterialTheme.typography.bodySmall,
+                    color = Color.White.copy(alpha = 0.55f))
             }
-            IconButton(onClick = onPlayPause) {
+
+            IconButton(onClick = onPrevious) {
                 //icona boto
                 Icon(
+                    imageVector = Icons.Rounded.SkipPrevious,
+                    contentDescription = null,
+                    modifier = Modifier.size(26.dp),
+                    tint = Color.White.copy(alpha = 0.7f)
+                )
+            }
+
+            // boto play/pause destacat amb el color de l'album
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .background(colors.primary)
+                    .clickable { onPlayPause() },
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    //icona boto
                     imageVector = if (isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
                     contentDescription = if (isPlaying) "Pausar" else "Reproducir",
-                    modifier = Modifier.size(32.dp),
-                    tint = MaterialTheme.colorScheme.primary                )
+                    modifier = Modifier.size(22.dp),
+                    tint = Color.White
+                )
+            }
+
+            IconButton(onClick = onNext) {
+                //icona boto
+                Icon(
+                    imageVector = Icons.Rounded.SkipNext,
+                    contentDescription = null,
+                    modifier = Modifier.size(26.dp),
+                    tint = Color.White.copy(alpha = 0.7f)
+                )
             }
         }
     }
 }
-
 @Composable
 fun PantallaPermisos(onGrantClick: () -> Unit) {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -468,7 +557,8 @@ fun fetchSongs(context: Context): List<Song> {
                     id = cursor.getLong(idCol),
                     albumId = cursor.getLong(idAlbumCol),
                     title = cursor.getString(titleCol),
-                    artist = cursor.getString(artistCol),
+                    artist = cursor.getString(artistCol).let {if (it == "<unknown>") "" else it
+                    },
                     data = cursor.getString(dataCol),
                     duration = cursor.getInt(durationCol)
                 )
@@ -504,48 +594,38 @@ fun formatTime(ms: Long): String {
 }
 
 @Composable
-fun agafarPaletteColor(albumId: Long): Color {
+fun agafarEsquemaColors(albumId: Long): ColorScheme {
     val context = LocalContext.current
     val albumArtUri = getAlbumArtUri(albumId)
 
-    // Color per defecte si no hi ha portada
-    val fallbackColor = MaterialTheme.colorScheme.primaryContainer
-    var accentColor by remember(albumId) { mutableStateOf(fallbackColor) }
+    //color que volem, gris per si falles
+    var targetColor by remember { mutableStateOf(Color.Gray) }
 
-    //fem que el color no canvii de cop
-    val animatedColor by animateColorAsState(
-        targetValue = accentColor,
-        animationSpec = tween(durationMillis = 600), // 600ms de transicio suau
-        label = "transicio_color"
-    )
-    //per agafar el color de la imatge
     LaunchedEffect(albumId) {
         val loader = coil.Coil.imageLoader(context)
         val request = coil.request.ImageRequest.Builder(context)
             .data(albumArtUri)
-            .allowHardware(false)
+            .allowHardware(false) //necesari per que palette pugui llegir els pixels del bitmap
             .build()
 
         val result = loader.execute(request)
         if (result is coil.request.SuccessResult) {
-            val bitmap = (result.drawable as android.graphics.drawable.BitmapDrawable).bitmap
-            androidx.palette.graphics.Palette.from(bitmap).generate { palette ->
-                val swatch = palette?.dominantSwatch
-
-                swatch?.let {
-                    val color = Color(it.rgb)
-                    //Si el color és massa fosc agafem un mes clar
-                    accentColor = if (it.hsl[2] < 0.2f) {
-                        Color(palette.lightVibrantSwatch?.rgb ?: fallbackColor.toArgb())
-                    } else {
-                        color
-                    }
-                }
+            val bitmap = (result.drawable as BitmapDrawable).bitmap
+            //palette analitza la imatge
+            Palette.from(bitmap).generate { palette ->
+                // busquem el color vibrant, sino el dominant i sino el gris
+                val rgb = palette?.getVibrantColor(
+                    palette.getDominantColor(Color.Gray.toArgb())
+                ) ?: Color.Gray.toArgb()
+                targetColor = Color(rgb) // li assignem el color a target color
             }
-        } else {
-            // si no hi ha portada tornem al color per defecte
-            accentColor = fallbackColor
         }
     }
-    return animatedColor
+
+    //retornem el color de manera que torna tot, surface, primary... amb la llibreria de Material Kolor (aixis ens fa la paleta completa)
+    return rememberDynamicColorScheme(
+        seedColor = targetColor,
+        isDark = false,
+        style = PaletteStyle.TonalSpot
+    )
 }

@@ -24,6 +24,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Lyrics
 import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
@@ -35,6 +36,7 @@ import androidx.compose.material.icons.rounded.SkipPrevious
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.HorizontalDivider
@@ -96,7 +98,7 @@ fun ImgAlbum(song: Song){
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun Slider(duration: Long, currentPosition: Long,onSeek: (Long) -> Unit,isPlaying: Boolean, color: Color){
+fun Slider(duration: Long, currentPosition: Long,onSeek: (Long) -> Unit,isPlaying: Boolean, colors: ColorScheme){
     //es per calcular el progress i es necesari per si es 0 que no doni error
     val progress = if (duration > 0) currentPosition.toFloat() / duration else 0f
 
@@ -109,9 +111,9 @@ fun Slider(duration: Long, currentPosition: Long,onSeek: (Long) -> Unit,isPlayin
         },
         //colors palette
         colors = SliderDefaults.colors(
-            thumbColor = color,
-            activeTrackColor = color,
-            inactiveTrackColor = color.copy(alpha = 0.2f)),
+            thumbColor = colors.onPrimaryContainer,
+            activeTrackColor = colors.onPrimaryContainer,
+            inactiveTrackColor = colors.onPrimaryContainer.copy(alpha = 0.2f)),
         modifier = Modifier //per fer mes gran el en si la barra
             .padding(horizontal = 24.dp),
         squigglesSpec = SquigglySlider.SquigglesSpec(
@@ -125,19 +127,19 @@ fun Slider(duration: Long, currentPosition: Long,onSeek: (Long) -> Unit,isPlayin
             .fillMaxWidth(0.8f),
         horizontalArrangement = Arrangement.SpaceBetween // Fica un a cada costat
     ) {
-        Text(formatTime(currentPosition))
-        Text(formatTime(duration))
+        Text(formatTime(currentPosition), color = colors.onPrimaryContainer, fontWeight = FontWeight.Bold )
+        Text(formatTime(duration), color = colors.onPrimaryContainer, fontWeight = FontWeight.Bold)
     }
 }
 
 @Composable
-fun TitolArtista(song: Song){
+fun TitolArtista(song: Song, colors: ColorScheme){
     //basicmarquee fa que es mogui el text si no quep en una linea, util per cuan el nom es molt llarg i no tenir que expandir amb maxLines ja que podria fer que les lyrics despres no es veiesin
-    Text(song.title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, modifier = Modifier
+    Text(song.title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold,color = colors.onPrimaryContainer, modifier = Modifier
         .fillMaxWidth(0.9f)
         .padding(start = 24.dp)
         .basicMarquee(Int.MAX_VALUE, repeatDelayMillis = 2000))
-    Text(song.artist, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier
+    Text(song.artist, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = colors.onPrimaryContainer, modifier = Modifier
         .fillMaxWidth(0.9f)
         .padding(start = 24.dp))
 
@@ -149,6 +151,7 @@ fun Lyrics(
     currentPosition: Long,
     onLyricsDownloaded: (String) -> Unit,
     onSeek: (Long) -> Unit,
+    colors: ColorScheme
 ) {
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
@@ -166,42 +169,56 @@ fun Lyrics(
     // estat per la previsualitzacio
     var seleccioPreview by remember { mutableStateOf<LyricSearchResult?>(null) }
 
+    // comprovem si les lyrics guardades son synced (format LRC comença per "[")
+    // aixi evitem passar lyrics planes al parser de la llibreria i que peti
+    val isSynced = remember(currentLyrics) {
+        currentLyrics?.trimStart()?.startsWith("[") == true
+    }
+    // netegem les lyrics abans de parsear
+    // - treiem linies que nomes tenen timestamp sense text (ex: "[00:08.57]")
+
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         if (currentLyrics == null) {
             //boto buscar lyrics
-            Button(onClick = {
-                isSearching = true
-                //busquem en un fil secundari a .io (per no anar al main i saturar)
-                scope.launch(Dispatchers.IO) {
-                    try {
-                        //obtenim la llista de lyrics
-                        val response = RetrofitClient.instance.getLyricsLlista(manualQuery)
-                        //tornem al main per dibuixarla
-                        withContext(Dispatchers.Main) {
-                            llistaResultat = response
+            IconButton(modifier = Modifier
+                .size(96.dp),
+                onClick = {
+                    isSearching = true
+                    //busquem en un fil secundari a .io (per no anar al main i saturar)
+                    scope.launch(Dispatchers.IO) {
+                        try {
+                            //obtenim la llista de lyrics
+                            val response = RetrofitClient.instance.getLyricsLlista(manualQuery)
+                            //tornem al main per dibuixarla
+                            withContext(Dispatchers.Main) {
+                                llistaResultat = response
+                            }
+                        } catch (e: Exception) {
+                            //tornem al main
+                            withContext(Dispatchers.Main) {
+                                //diguem l'error
+                                Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
+                            }
+                        } finally {
+                            //treiem el simbol de carregant
+                            withContext(Dispatchers.Main) { isSearching = false }
                         }
-                    } catch (e: Exception) {
-                        //tornem al main
-                        withContext(Dispatchers.Main) {
-                            //diguem l'error
-                            Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
-                        }
-                    } finally {
-                        //treiem el simbol de carregant
-                        withContext(Dispatchers.Main) { isSearching = false }
                     }
-                }
-            }) {
+                }) {
                 if (isSearching) {
                     //cercle de carrega
                     CircularProgressIndicator(
-                        modifier = Modifier.size(20.dp),
-                        strokeWidth = 2.dp,
-                        color = Color.White
+                        modifier = Modifier.size(36.dp),
+                        strokeWidth = 4.dp,
+                        color = colors.onPrimaryContainer
                     )
                 } else {
-                    Text("Buscar Lyrics")
-                }
+                    Icon(
+                        Icons.Rounded.Lyrics,
+                        contentDescription = null,
+                        tint = colors.onPrimaryContainer,
+                        modifier = Modifier.size(56.dp)
+                    )                }
             }
 
             if (llistaResultat != null) {
@@ -249,7 +266,7 @@ fun Lyrics(
                         } else {
                             //els mostrem en una columna bonics amb un limit de mida de llista (visible, es pot fer scroll pero perque no ocupi tota la pantalla si hi han molts resultats)
                             LazyColumn(modifier = Modifier.heightIn(max = 400.dp)) {
-                                items(resultat) { item ->
+                                items(resultat.filter { it.syncedLyrics != null }) { item ->
                                     Column(
                                         modifier = Modifier
                                             .fillMaxWidth()
@@ -258,9 +275,8 @@ fun Lyrics(
                                     ) {
                                         Text(text = item.trackName, fontWeight = FontWeight.Bold)
                                         Text(
-                                            text = "${item.artistName} • ${if (item.syncedLyrics != null) "Sincronitzada" else "No Sincronitzada"}",
+                                            text = item.artistName,
                                             style = MaterialTheme.typography.bodySmall,
-                                            color = if (item.syncedLyrics != null) Color.Green else Color.Red
                                         )
                                         HorizontalDivider(modifier = Modifier.padding(top = 8.dp), thickness = 0.5.dp)
                                     }
@@ -299,8 +315,8 @@ fun Lyrics(
                     },
                     confirmButton = {
                         Button(onClick = {
-                            //agafem el text, primer si pot ser sincronitzat
-                            val lletra = seleccioPreview?.syncedLyrics ?: seleccioPreview?.plainLyrics
+                            //agafem nomes el text sincronitzat, mai el pla, per evitar passar lyrics sense timestamps al parser i que peti
+                            val lletra = seleccioPreview?.syncedLyrics
                             if (lletra != null) {
                                 //la guardem a la bdd
                                 onLyricsDownloaded(lletra)
@@ -320,22 +336,39 @@ fun Lyrics(
                 )
             }
         } else {
-            //Karaoke (llibreria accompanist-lyrics-ui)
-            val lyricsParser = remember { AutoParser.Builder().build() }
-            val lyrics = remember(currentLyrics) {
-                lyricsParser.parse(currentLyrics!!)
-            }
-            val listState = remember(song.id) { LazyListState() }
-            val timeProvider by rememberUpdatedState(currentPosition.toInt())
+            if (isSynced) {
+                //Karaoke (llibreria accompanist-lyrics-ui)
+                val cleanedLyrics = remember(currentLyrics) {
+                    currentLyrics!!
+                        .lines()
+                        .filter { line ->
+                            val stripped = line.replace(Regex("\\[\\d{2}:\\d{2}\\.\\d{2}\\]"), "").trim()
+                            stripped.isNotEmpty() && stripped != "♪"
+                        }
+                        .distinctBy { line ->
+                            Regex("\\[\\d{2}:\\d{2}\\.\\d{2}\\]").find(line)?.value ?: line
+                        }
+                        .joinToString("\n")
+                }
 
-            KaraokeLyricsView(
-                listState = listState,
-                lyrics = lyrics,
-                currentPosition = { timeProvider },
-                onLineClicked = { line -> onSeek(line.start.toLong()) },
-                onLinePressed = { line -> onSeek(line.start.toLong()) },
-                modifier = Modifier.fillMaxWidth(0.9f)
-            )
+                val lyricsParser = remember { AutoParser.Builder().build() }
+                val lyrics = remember(currentLyrics) {
+                    lyricsParser.parse(cleanedLyrics)
+                }
+                val listState = remember(song.id) { LazyListState() }
+                val timeProvider by rememberUpdatedState(currentPosition.toInt())
+
+                KaraokeLyricsView(
+                    listState = listState,
+                    lyrics = lyrics,
+                    currentPosition = { timeProvider },
+                    onLineClicked = { line -> onSeek(line.start.toLong()) },
+                    onLinePressed = { line -> onSeek(line.start.toLong()) },
+                    modifier = Modifier.fillMaxWidth(0.9f),
+                    textColor = colors.onPrimaryContainer
+
+                )
+            }
         }
     }
 }

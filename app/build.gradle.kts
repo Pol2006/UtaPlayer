@@ -23,24 +23,14 @@ android {
 
     buildTypes {
         release {
-// 1. Activa la optimización y eliminación de código muerto
             isMinifyEnabled = true
-
-            // 2. Elimina recursos que no uses (imágenes, layouts de librerías, etc.)
             isShrinkResources = true
-
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-
-            // 3. Importante: Para poder probarla dándole al "Play" sin crear llaves nuevas
             signingConfig = signingConfigs.getByName("debug")
 
-            // 4. (Opcional) Optimización extra para el rendimiento de inicio
-            ndk {
-                debugSymbolLevel = "none"
-            }
         }
     }
     compileOptions {
@@ -74,18 +64,29 @@ dependencies {
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
+    //noinspection UseTomlInstead
     implementation("com.google.accompanist:accompanist-permissions:0.37.3")
+    //noinspection UseTomlInstead,GradleDependency
     implementation("androidx.media3:media3-exoplayer:1.9.1")
+    //noinspection UseTomlInstead,GradleDependency
     implementation("androidx.media3:media3-session:1.9.1")
+    //noinspection UseTomlInstead,GradleDependency
     implementation("androidx.media3:media3-ui:1.9.1")
+    //noinspection UseTomlInstead
     implementation("androidx.compose.material:material-icons-extended")
+    //noinspection UseTomlInstead
     implementation("io.coil-kt:coil-compose:2.7.0")
     implementation(libs.androidx.room.runtime)
+    //noinspection UseTomlInstead
     implementation("me.saket.squigglyslider:squigglyslider:1.0.0")
     ksp(libs.androidx.room.compiler)
+    //noinspection UseTomlInstead
     implementation("androidx.palette:palette-ktx:1.0.0")
+    //noinspection UseTomlInstead
     implementation("com.squareup.retrofit2:retrofit:3.0.0")
+    //noinspection UseTomlInstead
     implementation("com.squareup.retrofit2:converter-gson:3.0.0")
     implementation("com.mocharealm.accompanist:lyrics-ui:1.0.15")
     implementation("com.mocharealm.accompanist:lyrics-core:0.2.1") //https://github.com/6xingyv/accompanist-lyrics-ui
+    implementation("com.materialkolor:material-kolor:4.0.2")
 }
