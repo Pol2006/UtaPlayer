@@ -8,47 +8,86 @@ import android.media.MediaScannerConnection
 import android.os.Bundle
 import android.provider.MediaStore
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle.Companion.light
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.unit.dp
-import androidx.media3.common.MediaItem
-import androidx.media3.common.Player
-import com.google.accompanist.permissions.ExperimentalPermissionsApi
-import polete.utaplayer.ui.theme.UtaplayerTheme
-import androidx.compose.material.icons.*
-import androidx.compose.material.icons.rounded.*
-import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.KeyboardArrowDown
+import androidx.compose.material.icons.rounded.MusicNote
+import androidx.compose.material.icons.rounded.Pause
+import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.SkipNext
+import androidx.compose.material.icons.rounded.SkipPrevious
+import androidx.compose.material3.Button
+import androidx.compose.material3.ColorScheme
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale.Companion.Crop
-import androidx.compose.ui.unit.sp
-import coil.compose.AsyncImage
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
+import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
+import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import androidx.palette.graphics.Palette
+import coil.compose.AsyncImage
+import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
 import com.google.common.util.concurrent.MoreExecutors
 import com.materialkolor.PaletteStyle
@@ -58,13 +97,19 @@ import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import polete.utaplayer.ui.theme.UtaplayerTheme
 
 
 class MainActivity : ComponentActivity() {
     @OptIn(ExperimentalPermissionsApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
+        enableEdgeToEdge(
+            navigationBarStyle = light(
+                android.graphics.Color.TRANSPARENT, // Color de fons
+                android.graphics.Color.TRANSPARENT  // Color de control de contrast
+            )
+        )
         setContent {
             UtaplayerTheme {
                 // Demanem permisos (Android 13+)
@@ -96,14 +141,16 @@ fun UtaPlayerApp() {
 
     val database = remember { AppDatabase.getDatabase(context) } //declarem base de dades
     val songDao = remember { database.songDao() } //declarem el dao
-    val songList by songDao.getAllSongs().collectAsState(emptyList()) //Serveix per mirar la base de dades en temps real
+    val songList by songDao.getAllSongs()
+        .collectAsState(emptyList()) //Serveix per mirar la base de dades en temps real
     var currentSong by remember { mutableStateOf<Song?>(null) } //canço actual
     var isPlaying by remember { mutableStateOf(false) } //saber si esta sonant o no
     var currentPosition by remember { mutableLongStateOf(0L) } //posicio actual canço
     var duration by remember { mutableLongStateOf(0L) } //duracio canço
     var isFullScreen by remember { mutableStateOf(false) } //pantalla completa
     val scope = rememberCoroutineScope()
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true) //per animacio de lliscar cap abaix
+    val sheetState =
+        rememberModalBottomSheetState(skipPartiallyExpanded = true) //per animacio de lliscar cap abaix
     var mediaItemsLoaded by remember { mutableStateOf(false) }
 
     // Creem un token d'identificacio per conectarnos a AudioPlayerService que fa que el controlador sapiga les ordres de la notificacio i reproduccio
@@ -129,7 +176,7 @@ fun UtaPlayerApp() {
                 currentSong = songList.find { it.id == mediaId }
                 isPlaying = c.isPlaying
             }
-                    // Indica que el codi anterior s'ha d'executar immediatament en el mateix fil. (optimitzacio)
+            // Indica que el codi anterior s'ha d'executar immediatament en el mateix fil. (optimitzacio)
         }, MoreExecutors.directExecutor())
         //tanca conexio al tencar app
         onDispose {
@@ -142,7 +189,7 @@ fun UtaPlayerApp() {
         if (songList.isEmpty() || mediaItemsLoaded) return@LaunchedEffect
 
         if (currentController.mediaItemCount == 0) {
-        val mediaItems = withContext(Dispatchers.Default) {
+            val mediaItems = withContext(Dispatchers.Default) {
                 songList.map { song ->
                     MediaItem.Builder()
                         .setMediaId(song.id.toString())
@@ -158,8 +205,7 @@ fun UtaPlayerApp() {
                 }
             }
             currentController.setMediaItems(mediaItems)
-        }
-        else {
+        } else {
             //si venim de tancar la app i tenim musica busquem quina es perque surti el miniplayer
             val idSonant = currentController.currentMediaItem?.mediaId?.toLongOrNull()
             if (idSonant != null && currentController.isPlaying) {
@@ -167,7 +213,7 @@ fun UtaPlayerApp() {
                 isPlaying = currentController.isPlaying
             }
         }
-            mediaItemsLoaded = true
+        mediaItemsLoaded = true
     }
     // Escanegem el disc per si hi ha fitxers nous
     LaunchedEffect(Unit) {
@@ -201,8 +247,8 @@ fun UtaPlayerApp() {
     LaunchedEffect(isPlaying, isFullScreen) {
         if (isPlaying) {
             while (true) {
-                currentPosition = controller?.currentPosition?: 0L
-                duration = controller?.duration?.coerceAtLeast(0L)?:0L // fer que minim sigui 0
+                currentPosition = controller?.currentPosition ?: 0L
+                duration = controller?.duration?.coerceAtLeast(0L) ?: 0L // fer que minim sigui 0
                 kotlinx.coroutines.delay(if (isFullScreen) 32L else 500L)
             }
         }
@@ -236,97 +282,113 @@ fun UtaPlayerApp() {
     }
     //visual
 
-        Scaffold(
-            containerColor = Color.Transparent,
-            bottomBar = {
-                /// Només si NO estem en pantalla completa i hi ha una cançó
-                if (!isFullScreen && currentSong != null) {
+    Scaffold(
+        containerColor = Color.Transparent,
+        bottomBar = {
+            /// Només si NO estem en pantalla completa i hi ha una cançó
+            if (!isFullScreen && currentSong != null) {
 
-                    Surface(
-                        modifier = Modifier
-                            // afegim el gest de lliscar
-                            .pointerInput(Unit) {
-                                detectVerticalDragGestures { change, dragAmount ->
-                                    // dragAmount es per detectar que el dit puja cap adalt
-                                    if (dragAmount < -15) { isFullScreen = true } } }
-                            .clickable { isFullScreen = true },
-                        color = Color.Transparent
-                    ) {
-                        MiniPlayer(
-                            song = currentSong!!,
-                            isPlaying = isPlaying,
-                            onPlayPause = { if (isPlaying) controller?.pause() else controller?.play() },
-                            onNext = { controller?.seekToNext() },
-                            onPrevious = { controller?.seekToPrevious() },
-                            currentPosition = currentPosition,
-                            duration = duration
-                            )
-                    }
-                }
-            }
-        ) { padding ->
-
-            // llistar cançons
-                Surface {
-                    if(songList.isNotEmpty())
-                        LazyColumn(modifier = Modifier
-                            .padding(padding)
-                            .fillMaxSize()
-                            .background(color = Color.Transparent)) {
-                            items(songList,key = { it.id }) { canco ->
-                                SongRow(
-                                    song = canco,
-                                    onSongClick = { cancoClicada ->
-                                        currentSong = cancoClicada
-                                        val index = songList.indexOf(cancoClicada)
-                                        if (index != -1) {
-                                            controller?.seekTo(index, 0L) // per anar a la canço triada
-                                            controller?.prepare()
-                                            controller?.play()
-                                        }
-                                    },
-                                    currentSong = currentSong,
-                                )
+                Surface(
+                    modifier = Modifier
+                        // afegim el gest de lliscar
+                        .pointerInput(Unit) {
+                            detectVerticalDragGestures { change, dragAmount ->
+                                // dragAmount es per detectar que el dit puja cap adalt
+                                if (dragAmount < -15) {
+                                    isFullScreen = true
+                                }
                             }
                         }
-                    else{
-                        Box(
-                            modifier = Modifier
-                                .padding(padding)
-                                .fillMaxSize(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text("No s'ha trobat cap cançó")
-                        }
-                    }
+                        .clickable { isFullScreen = true },
+                    color = Color.Transparent
+                ) {
+                    MiniPlayer(
+                        song = currentSong!!,
+                        isPlaying = isPlaying,
+                        onPlayPause = { if (isPlaying) controller?.pause() else controller?.play() },
+                        onNext = { controller?.seekToNext() },
+                        onPrevious = { controller?.seekToPrevious() },
+                        currentPosition = currentPosition,
+                        duration = duration
+                    )
                 }
-                if (isFullScreen && currentSong != null) {
-                    //animacio per tancar el player
-                    ModalBottomSheet(
-                        onDismissRequest = { isFullScreen = false }, // Es tanca si toques fora o llisques baix
-                        sheetState = sheetState,
-                        containerColor = MaterialTheme.colorScheme.background,
-                        tonalElevation = 0.dp,
-                        dragHandle = { BottomSheetDefaults.DragHandle()  } // La ratlleta de dalt per estirar
-                    ) {
-                        PlayerFullScreen(
-                            song = currentSong!!,
-                            isPlaying = isPlaying,
-                            currentPosition = currentPosition,
-                            duration = duration,
-                            onPlayPause = { if (isPlaying) controller?.pause() else controller?.play() },
-                            onSeek = {  currentPosition = it
-                                controller?.seekTo(it) /*per anar al ms que toquin*/ },
-                            onNext = { controller?.seekToNext() },
-                            onPrevious = { controller?.seekToPrevious() },
-                            songDao = songDao,
-                            scope = scope,
+            }
+        }
+    ) { padding ->
 
+        // llistar cançons
+        Surface {
+            if (songList.isNotEmpty())
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(
+                        top = padding.calculateTopPadding(),
+                        bottom = padding.calculateBottomPadding() + 80.dp
+                    )
+                )
+                {
+                    items(songList, key = { it.id }) { canco ->
+                        SongRow(
+                            song = canco,
+                            onSongClick = { cancoClicada ->
+                                currentSong = cancoClicada
+                                val index = songList.indexOf(cancoClicada)
+                                if (index != -1) {
+                                    controller?.seekTo(index, 0L) // per anar a la canço triada
+                                    controller?.prepare()
+                                    controller?.play()
+                                }
+                            },
+                            currentSong = currentSong,
                         )
                     }
                 }
+            else {
+                Box(
+                    modifier = Modifier
+                        .padding(padding)
+                        .fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("No s'ha trobat cap cançó")
+                }
+            }
+        }
+        AnimatedVisibility(
+            visible = isFullScreen && currentSong != null,
+            enter = slideInVertically(
+                initialOffsetY = { it }, //  comença desde abaix de tot
+                animationSpec = tween(durationMillis = 400) // duracio de pujada
+            ) + fadeIn(),
+            exit = slideOutVertically(
+                targetOffsetY = { it }, // per baixar
+                animationSpec = tween(durationMillis = 400) // duracio baixada
+            ) + fadeOut()
+        ) {
+            BackHandler(enabled = isFullScreen) {
+                isFullScreen = false
+            }
+            PlayerFullScreen(
+                song = currentSong!!,
+                isPlaying = isPlaying,
+                currentPosition = currentPosition,
+                duration = duration,
+                onPlayPause = { if (isPlaying) controller?.pause() else controller?.play() },
+                onSeek = {
+                    currentPosition = it
+                    controller?.seekTo(it) /*per anar al ms que toquin*/
+                },
+                onNext = { controller?.seekToNext() },
+                onPrevious = { controller?.seekToPrevious() },
+                songDao = songDao,
+                scope = scope,
+                onClose = { isFullScreen = false }
+
+            )
         }
     }
+}
+
 
 @Composable
 fun SongRow(song: Song, onSongClick: (Song) -> Unit, currentSong: Song?) {
@@ -338,30 +400,43 @@ fun SongRow(song: Song, onSongClick: (Song) -> Unit, currentSong: Song?) {
             .clickable { onSongClick(song) } // tornem canço
             .padding(4.dp)
             .clip(RoundedCornerShape(16.dp))
-            .background(color = if(song == currentSong) colors.primary.copy(alpha = 0.15f) else MaterialTheme.colorScheme.surfaceVariant),
-            verticalAlignment = Alignment.CenterVertically
+            .background(color = if (song == currentSong) colors.primary.copy(alpha = 0.5f) else MaterialTheme.colorScheme.surfaceVariant),
+        verticalAlignment = Alignment.CenterVertically
 
     ) {
-            AsyncImage(
-                model = getAlbumArtUri(song.albumId), // funcio per agafar img
-                contentDescription = "album img",
-                contentScale = Crop,
-                modifier = Modifier
-                    .size(80.dp)
-                    .clip(RoundedCornerShape(8.dp)),
-                error = rememberVectorPainter(Icons.Rounded.MusicNote) , // si falla o no te imatge
-                placeholder = rememberVectorPainter(Icons.Rounded.MusicNote) //mentre carrega
-            )
+        AsyncImage(
+            model = getAlbumArtUri(song.albumId), // funcio per agafar img
+            contentDescription = "album img",
+            contentScale = Crop,
+            modifier = Modifier
+                .size(80.dp)
+                .clip(RoundedCornerShape(8.dp)),
+            error = rememberVectorPainter(Icons.Rounded.MusicNote), // si falla o no te imatge
+            placeholder = rememberVectorPainter(Icons.Rounded.MusicNote) //mentre carrega
+        )
         Spacer(Modifier.padding(4.dp))
 
         Column(modifier = Modifier.weight(1f)) {
-            Text(text = song.title, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface, maxLines = 1, modifier = Modifier.basicMarquee(Int.MAX_VALUE, repeatDelayMillis = 2500))
-            if(song.artist != "")Text(text = song.artist, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1,modifier = Modifier.basicMarquee(Int.MAX_VALUE, repeatDelayMillis = 2000))
+            Text(
+                text = song.title,
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                modifier = Modifier.basicMarquee(Int.MAX_VALUE, repeatDelayMillis = 2500)
+            )
+            if (song.artist != "") Text(
+                text = song.artist,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                modifier = Modifier.basicMarquee(Int.MAX_VALUE, repeatDelayMillis = 2000)
+            )
 
         }
 
     }
 }
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PlayerFullScreen(
@@ -374,7 +449,8 @@ fun PlayerFullScreen(
     onNext: () -> Unit,          //seguent canço
     onPrevious: () -> Unit,       //anterior canço
     songDao: SongDao,
-    scope: CoroutineScope
+    scope: CoroutineScope,
+    onClose: () -> Unit
 
 ) {
     // colors
@@ -398,63 +474,111 @@ fun PlayerFullScreen(
     val animatedPastel = lerp(animatedSurface, animatedContainer, 0.5f)
 
     // pantalla full screen
-    Box(modifier = Modifier.fillMaxSize().background(animatedPastel)) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(animatedPastel)
+            .navigationBarsPadding()
+            .statusBarsPadding()
+    ) {
 
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState()), //per que no es quedi pillada l'animacio afegim scroll
-                horizontalAlignment = Alignment.CenterHorizontally
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            //img album
-            ImgAlbum(song)
-            //Titol i artista
-            TitolArtista(song, colors)
-
+            Spacer(modifier = Modifier.height(40.dp))
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .pointerInput(Unit) {
+                        detectVerticalDragGestures { change, dragAmount ->
+                            // Si el moviment és cap avall (positiu) i té una mica d'inèrcia
+                            if (dragAmount > 65) {
+                                onClose()
+                            }
+                        }
+                    }
+            ) {
+                //img album
+                ImgAlbum(song)
+                //Titol i artista
+                TitolArtista(song, colors)
+            }
             // 4. Slider i Temps
-            Slider(duration,currentPosition,onSeek,isPlaying,colors)
+            Slider(duration, currentPosition, onSeek, isPlaying, colors)
             Box(
                 modifier = Modifier
                     .weight(0.9f)
-            ){
-                Lyrics(song,currentPosition, onLyricsDownloaded = {lyrics ->
-                    scope.launch(Dispatchers.IO) {
-                        songDao.updateLyrics(song.id, lyrics)
-                    }},
+            ) {
+                Lyrics(
+                    song, currentPosition, onLyricsDownloaded = { lyrics ->
+                        scope.launch(Dispatchers.IO) {
+                            songDao.updateLyrics(song.id, lyrics)
+                        }
+                    },
                     onSeek = { milisegundos ->
-                    // moure canço al temps de la lletra
-                    onSeek(milisegundos)}, colors = colors)
+                        // moure canço al temps de la lletra
+                        onSeek(milisegundos)
+                    }, colors = colors
+                )
             }
             //Botons de control
-            BarraBotons(onPrevious,onPlayPause,isPlaying,onNext,colors.primary)
+            BarraBotons(onPrevious, onPlayPause, isPlaying, onNext, colors.primary)
+        }
+        IconButton(
+            onClick = onClose,
+            modifier = Modifier
+                .padding(8.dp)
+                .size(48.dp)
+                .align(Alignment.TopStart)
+        ) {
+            Icon(
+                imageVector = Icons.Rounded.KeyboardArrowDown,
+                contentDescription = "Tancar",
+                tint = colors.onSurface,
+                modifier = Modifier.size(36.dp)
+            )
         }
     }
 }
+
 @Composable
-fun MiniPlayer(song: Song, isPlaying: Boolean, onPlayPause: () -> Unit, onNext: () -> Unit, onPrevious: () -> Unit, currentPosition: Long, duration: Long) {
+fun MiniPlayer(
+    song: Song,
+    isPlaying: Boolean,
+    onPlayPause: () -> Unit,
+    onNext: () -> Unit,
+    onPrevious: () -> Unit,
+    currentPosition: Long,
+    duration: Long
+) {
     val colors = agafarEsquemaColors(song.albumId)
     val progress = if (duration > 0) currentPosition.toFloat() / duration.toFloat() else 0f
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
+            .background(MaterialTheme.colorScheme.background)
+            .background(colors.primary.copy(alpha = 0.5f))
             .navigationBarsPadding()
-            .background(colors.primary.copy(alpha = 0.15f))
     ) {
         // barra de progres al fons
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(3.dp)
-                .background(colors.primary.copy(alpha = 0.2f))
-                .align(Alignment.BottomStart)
+                .background(colors.onPrimaryContainer.copy(alpha = 1f))
+                .align(Alignment.TopStart)
         )
         Box(
             modifier = Modifier
                 .fillMaxWidth(progress)
                 .height(3.dp)
                 .background(colors.primary)
-                .align(Alignment.BottomStart)
+                .align(Alignment.TopStart)
         )
 
         Row(
@@ -472,11 +596,19 @@ fun MiniPlayer(song: Song, isPlaying: Boolean, onPlayPause: () -> Unit, onNext: 
                 placeholder = rememberVectorPainter(Icons.Rounded.MusicNote) //mentre carrega
             )
 
-            Column(modifier = Modifier.weight(1f).padding(start = 12.dp)) {
-                Text(text = song.title, maxLines = 1, color = Color.White,
-                    modifier = Modifier.basicMarquee(Int.MAX_VALUE, repeatDelayMillis = 2500))
-                Text(text = song.artist, style = MaterialTheme.typography.bodySmall,
-                    color = Color.White.copy(alpha = 0.55f))
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(start = 12.dp)
+            ) {
+                Text(
+                    text = song.title, maxLines = 1, color = Color.White,
+                    modifier = Modifier.basicMarquee(Int.MAX_VALUE, repeatDelayMillis = 2500)
+                )
+                Text(
+                    text = song.artist, style = MaterialTheme.typography.bodySmall,
+                    color = Color.White.copy(alpha = 0.55f)
+                )
             }
 
             IconButton(onClick = onPrevious) {
@@ -519,6 +651,7 @@ fun MiniPlayer(song: Song, isPlaying: Boolean, onPlayPause: () -> Unit, onNext: 
         }
     }
 }
+
 @Composable
 fun PantallaPermisos(onGrantClick: () -> Unit) {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -539,7 +672,8 @@ fun fetchSongs(context: Context): List<Song> {
         MediaStore.Audio.Media.DATA,
         MediaStore.Audio.Media.DURATION
     )
-    val selection = "${MediaStore.Audio.Media.IS_MUSIC} = 1" //Ara nomes ens donara musica, no audios de whatsapp i altres coses
+    val selection =
+        "${MediaStore.Audio.Media.IS_MUSIC} = 1" //Ara nomes ens donara musica, no audios de whatsapp i altres coses
 
 
     context.contentResolver.query(uri, projection, selection, null, null)?.use { cursor ->
@@ -556,7 +690,8 @@ fun fetchSongs(context: Context): List<Song> {
                     id = cursor.getLong(idCol),
                     albumId = cursor.getLong(idAlbumCol),
                     title = cursor.getString(titleCol),
-                    artist = cursor.getString(artistCol).let {if (it == "<unknown>") "" else it
+                    artist = cursor.getString(artistCol).let {
+                        if (it == "<unknown>") "" else it
                     },
                     data = cursor.getString(dataCol),
                     duration = cursor.getInt(durationCol)
@@ -566,12 +701,14 @@ fun fetchSongs(context: Context): List<Song> {
     }
     return tempSongs
 }
+
 fun getAlbumArtUri(albumId: Long): android.net.Uri {
     return android.content.ContentUris.withAppendedId(
         "content://media/external/audio/albumart".toUri(),
         albumId
     )
 }
+
 //serveix per si afegeixes arxius nous i el mobil encara no ho ha procesat a la base de dades per forçar-ho
 fun scanMusic(context: Context, onFinish: () -> Unit) {
     MediaScannerConnection.scanFile(

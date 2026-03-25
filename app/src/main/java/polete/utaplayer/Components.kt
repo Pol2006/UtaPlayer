@@ -66,6 +66,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.mocharealm.accompanist.lyrics.core.parser.AutoParser
+import com.mocharealm.accompanist.lyrics.ui.composable.lyrics.KaraokeBreathingDotsDefaults
 import com.mocharealm.accompanist.lyrics.ui.composable.lyrics.KaraokeLyricsView
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -73,7 +74,7 @@ import kotlinx.coroutines.withContext
 import me.saket.squiggles.SquigglySlider
 
 @Composable
-fun ImgAlbum(song: Song){
+fun ImgAlbum(song: Song) {
     Surface(
         modifier = Modifier
             .fillMaxWidth(0.9f)
@@ -89,7 +90,7 @@ fun ImgAlbum(song: Song){
                 contentDescription = "album img",
                 modifier = Modifier.fillMaxSize(),
                 contentScale = Crop, // fem que agafi tot el lloc
-                error = rememberVectorPainter(Icons.Rounded.MusicNote) , // si falla o no te imatge
+                error = rememberVectorPainter(Icons.Rounded.MusicNote), // si falla o no te imatge
                 placeholder = rememberVectorPainter(Icons.Rounded.MusicNote) //mentre carrega
             )
         }
@@ -98,7 +99,13 @@ fun ImgAlbum(song: Song){
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun Slider(duration: Long, currentPosition: Long,onSeek: (Long) -> Unit,isPlaying: Boolean, colors: ColorScheme){
+fun Slider(
+    duration: Long,
+    currentPosition: Long,
+    onSeek: (Long) -> Unit,
+    isPlaying: Boolean,
+    colors: ColorScheme
+) {
     //es per calcular el progress i es necesari per si es 0 que no doni error
     val progress = if (duration > 0) currentPosition.toFloat() / duration else 0f
 
@@ -113,7 +120,8 @@ fun Slider(duration: Long, currentPosition: Long,onSeek: (Long) -> Unit,isPlayin
         colors = SliderDefaults.colors(
             thumbColor = colors.onPrimaryContainer,
             activeTrackColor = colors.onPrimaryContainer,
-            inactiveTrackColor = colors.onPrimaryContainer.copy(alpha = 0.2f)),
+            inactiveTrackColor = colors.onPrimaryContainer.copy(alpha = 0.2f)
+        ),
         modifier = Modifier //per fer mes gran el en si la barra
             .padding(horizontal = 24.dp),
         squigglesSpec = SquigglySlider.SquigglesSpec(
@@ -127,21 +135,37 @@ fun Slider(duration: Long, currentPosition: Long,onSeek: (Long) -> Unit,isPlayin
             .fillMaxWidth(0.8f),
         horizontalArrangement = Arrangement.SpaceBetween // Fica un a cada costat
     ) {
-        Text(formatTime(currentPosition), color = colors.onPrimaryContainer, fontWeight = FontWeight.Bold )
+        Text(
+            formatTime(currentPosition),
+            color = colors.onPrimaryContainer,
+            fontWeight = FontWeight.Bold
+        )
         Text(formatTime(duration), color = colors.onPrimaryContainer, fontWeight = FontWeight.Bold)
     }
 }
 
 @Composable
-fun TitolArtista(song: Song, colors: ColorScheme){
+fun TitolArtista(song: Song, colors: ColorScheme) {
     //basicmarquee fa que es mogui el text si no quep en una linea, util per cuan el nom es molt llarg i no tenir que expandir amb maxLines ja que podria fer que les lyrics despres no es veiesin
-    Text(song.title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold,color = colors.onPrimaryContainer, modifier = Modifier
-        .fillMaxWidth(0.9f)
-        .padding(start = 24.dp)
-        .basicMarquee(Int.MAX_VALUE, repeatDelayMillis = 2000))
-    Text(song.artist, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = colors.onPrimaryContainer, modifier = Modifier
-        .fillMaxWidth(0.9f)
-        .padding(start = 24.dp))
+    Text(
+        song.title,
+        style = MaterialTheme.typography.titleLarge,
+        fontWeight = FontWeight.Bold,
+        color = colors.onPrimaryContainer,
+        modifier = Modifier
+            .fillMaxWidth(0.9f)
+            .padding(start = 24.dp)
+            .basicMarquee(Int.MAX_VALUE, repeatDelayMillis = 2000)
+    )
+    Text(
+        song.artist,
+        style = MaterialTheme.typography.titleMedium,
+        fontWeight = FontWeight.Bold,
+        color = colors.onPrimaryContainer,
+        modifier = Modifier
+            .fillMaxWidth(0.9f)
+            .padding(start = 24.dp)
+    )
 
 }
 
@@ -180,8 +204,9 @@ fun Lyrics(
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         if (currentLyrics == null) {
             //boto buscar lyrics
-            IconButton(modifier = Modifier
-                .size(96.dp),
+            IconButton(
+                modifier = Modifier
+                    .size(96.dp),
                 onClick = {
                     isSearching = true
                     //busquem en un fil secundari a .io (per no anar al main i saturar)
@@ -197,7 +222,8 @@ fun Lyrics(
                             //tornem al main
                             withContext(Dispatchers.Main) {
                                 //diguem l'error
-                                Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_SHORT)
+                                    .show()
                             }
                         } finally {
                             //treiem el simbol de carregant
@@ -218,7 +244,8 @@ fun Lyrics(
                         contentDescription = null,
                         tint = colors.onPrimaryContainer,
                         modifier = Modifier.size(56.dp)
-                    )                }
+                    )
+                }
             }
 
             if (llistaResultat != null) {
@@ -239,14 +266,21 @@ fun Lyrics(
                                     //consulta fora del main thread un altre cop
                                     scope.launch(Dispatchers.IO) {
                                         try {
-                                            val response = RetrofitClient.instance.getLyricsLlista(manualQuery)
+                                            val response =
+                                                RetrofitClient.instance.getLyricsLlista(manualQuery)
                                             //retornem la llista al main
-                                            withContext(Dispatchers.Main) { llistaResultat = response }
+                                            withContext(Dispatchers.Main) {
+                                                llistaResultat = response
+                                            }
                                             //ficat _ en canvi de e (quick fix de android studio) perque no mostri warning
                                         } catch (_: Exception) {
                                             withContext(Dispatchers.Main) {
                                                 //per controlar si falles el internet o el servidor
-                                                Toast.makeText(context, "Error de connexió", Toast.LENGTH_SHORT).show()
+                                                Toast.makeText(
+                                                    context,
+                                                    "Error de connexió",
+                                                    Toast.LENGTH_SHORT
+                                                ).show()
                                             }
                                         }
                                     }
@@ -278,7 +312,10 @@ fun Lyrics(
                                             text = item.artistName,
                                             style = MaterialTheme.typography.bodySmall,
                                         )
-                                        HorizontalDivider(modifier = Modifier.padding(top = 8.dp), thickness = 0.5.dp)
+                                        HorizontalDivider(
+                                            modifier = Modifier.padding(top = 8.dp),
+                                            thickness = 0.5.dp
+                                        )
                                     }
                                 }
                             }
@@ -307,7 +344,8 @@ fun Lyrics(
                             ) {
                                 Text(
                                     //provem de agafar primer les lletres sincronitzades, si falla agafem les planes, i si no un text buit per evitar errors
-                                    text = seleccioPreview!!.syncedLyrics ?: seleccioPreview!!.plainLyrics ?: "",
+                                    text = seleccioPreview!!.syncedLyrics
+                                        ?: seleccioPreview!!.plainLyrics ?: "",
                                     style = MaterialTheme.typography.bodySmall
                                 )
                             }
@@ -342,7 +380,8 @@ fun Lyrics(
                     currentLyrics!!
                         .lines()
                         .filter { line ->
-                            val stripped = line.replace(Regex("\\[\\d{2}:\\d{2}\\.\\d{2}\\]"), "").trim()
+                            val stripped =
+                                line.replace(Regex("\\[\\d{2}:\\d{2}\\.\\d{2}\\]"), "").trim()
                             stripped.isNotEmpty() && stripped != "♪"
                         }
                         .distinctBy { line ->
@@ -365,13 +404,17 @@ fun Lyrics(
                     onLineClicked = { line -> onSeek(line.start.toLong()) },
                     onLinePressed = { line -> onSeek(line.start.toLong()) },
                     modifier = Modifier.fillMaxWidth(0.9f),
-                    textColor = colors.onPrimaryContainer
+                    textColor = colors.onPrimaryContainer,
+                    breathingDotsDefaults = KaraokeBreathingDotsDefaults(
+                        breathingDotsColor = colors.onPrimaryContainer
+                    )
 
                 )
             }
         }
     }
 }
+
 @Composable
 fun BarraBotons(
     onPrevious: () -> Unit,
