@@ -20,6 +20,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Lyrics
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.HorizontalDivider
@@ -225,8 +226,10 @@ fun Lyrics(
             if (seleccioPreview != null) {
                 AlertDialog(
                     //si cliquem fora o enrere
+                        containerColor = colors.primaryContainer,
+                    textContentColor = colors.onPrimaryContainer,
                     onDismissRequest = { seleccioPreview = null },
-                    title = { Text("Previsualitzacio") },
+                    title = { Text("Previsualitzacio", color = colors.onPrimaryContainer)},
                     text = {
                         Column {
                             Text(text = seleccioPreview!!.trackName, fontWeight = FontWeight.Bold)
@@ -259,13 +262,19 @@ fun Lyrics(
                                 llistaResultat = null
                                 seleccioPreview = null
                             }
-                        }) {
-                            Text("Importar")
+                        },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = colors.primaryContainer,
+                                contentColor = colors.onPrimaryContainer
+                            )
+                            ) {
+                            Text("Importar", color = colors.onPrimaryContainer)
                         }
                     },
                     dismissButton = {
-                        TextButton(onClick = { seleccioPreview = null }) { Text("Tornar") }
+                        TextButton(onClick = { seleccioPreview = null }) { Text("Tornar", color = colors.onPrimaryContainer) }
                     }
+
                 )
             }
         } else {
