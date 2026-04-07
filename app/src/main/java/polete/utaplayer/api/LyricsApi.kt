@@ -1,4 +1,4 @@
-package polete.utaplayer
+package polete.utaplayer.api
 
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory

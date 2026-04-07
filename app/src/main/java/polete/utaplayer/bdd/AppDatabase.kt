@@ -1,9 +1,10 @@
-package polete.utaplayer
+package polete.utaplayer.bdd
 
 import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import polete.utaplayer.dataclass.Song
 
 @Database(entities = [Song::class], version = 2, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {

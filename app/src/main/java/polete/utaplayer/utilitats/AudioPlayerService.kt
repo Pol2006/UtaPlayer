@@ -1,4 +1,4 @@
-package polete.utaplayer
+package polete.utaplayer.utilitats
 
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.MediaSession

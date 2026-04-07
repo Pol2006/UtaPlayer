@@ -1,7 +1,8 @@
-package polete.utaplayer
+package polete.utaplayer.bdd
 
 import androidx.room.*
 import kotlinx.coroutines.flow.Flow
+import polete.utaplayer.dataclass.Song
 
 @Dao
 interface SongDao {
@@ -23,6 +24,9 @@ interface SongDao {
 
     @Query("UPDATE songs SET lyrics = :lyrics WHERE id = :id")
     suspend fun updateLyrics(id: Long, lyrics: String)
+
+    @Query("UPDATE songs SET lyrics = NULL WHERE id = :id")
+    suspend fun deleteLyrics(id: Long)
 
     @Query("SELECT COUNT(*) FROM songs")
     suspend fun getCount(): Int

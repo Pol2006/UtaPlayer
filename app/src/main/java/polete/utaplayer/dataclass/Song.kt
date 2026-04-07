@@ -1,4 +1,4 @@
-package polete.utaplayer
+package polete.utaplayer.dataclass
 
 import androidx.room.*
 
@@ -6,6 +6,7 @@ import androidx.room.*
 data class Song(
     @PrimaryKey val id: Long, //ID
     val albumId: Long, //Per obtenir portada
+    val album: String = "", //Nom album
     val title: String, //Titol
     val artist: String, //Nom Artista
     val data: String, //Ruta fitxer

@@ -1,16 +1,10 @@
-package polete.utaplayer
+package polete.utaplayer.visual
 
 import android.widget.Toast
-import androidx.compose.foundation.background
-import androidx.compose.foundation.basicMarquee
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -21,32 +15,19 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Lyrics
-import androidx.compose.material.icons.rounded.MusicNote
-import androidx.compose.material.icons.rounded.Pause
-import androidx.compose.material.icons.rounded.PlayArrow
-import androidx.compose.material.icons.rounded.Repeat
-import androidx.compose.material.icons.rounded.Search
-import androidx.compose.material.icons.rounded.Shuffle
-import androidx.compose.material.icons.rounded.SkipNext
-import androidx.compose.material.icons.rounded.SkipPrevious
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ColorScheme
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.SliderDefaults
-import androidx.compose.material3.Surface
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -58,126 +39,35 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.rememberVectorPainter
-import androidx.compose.ui.layout.ContentScale.Companion.Crop
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import coil.compose.AsyncImage
 import com.mocharealm.accompanist.lyrics.core.parser.AutoParser
 import com.mocharealm.accompanist.lyrics.ui.composable.lyrics.KaraokeBreathingDotsDefaults
 import com.mocharealm.accompanist.lyrics.ui.composable.lyrics.KaraokeLyricsView
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import me.saket.squiggles.SquigglySlider
+import polete.utaplayer.api.LyricSearchResult
+import polete.utaplayer.api.RetrofitClient
+import polete.utaplayer.dataclass.Song
+import kotlin.collections.filter
+import kotlin.text.lines
 
 @Composable
-fun ImgAlbum(song: Song) {
-    Surface(
-        modifier = Modifier
-            .fillMaxWidth(0.9f)
-            .aspectRatio(1f)
-            .padding(24.dp),
-        shape = RoundedCornerShape(20.dp),
-        color = MaterialTheme.colorScheme.primaryContainer,
-        shadowElevation = 12.dp
-    ) {
-        Box(contentAlignment = Alignment.Center) {
-            AsyncImage(
-                model = getAlbumArtUri(song.albumId), // funcio per agafar img
-                contentDescription = "album img",
-                modifier = Modifier.fillMaxSize(),
-                contentScale = Crop, // fem que agafi tot el lloc
-                error = rememberVectorPainter(Icons.Rounded.MusicNote), // si falla o no te imatge
-                placeholder = rememberVectorPainter(Icons.Rounded.MusicNote) //mentre carrega
-            )
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun Slider(
-    duration: Long,
-    currentPosition: Long,
-    onSeek: (Long) -> Unit,
-    isPlaying: Boolean,
-    colors: ColorScheme
-) {
-    //es per calcular el progress i es necesari per si es 0 que no doni error
-    val progress = if (duration > 0) currentPosition.toFloat() / duration else 0f
-
-    SquigglySlider(
-        value = progress,
-        // cuan cliquem anem al nou lloc clicat
-        onValueChange = { newProgress ->
-            val newTime = (newProgress * duration).toLong()
-            onSeek(newTime)
-        },
-        //colors palette
-        colors = SliderDefaults.colors(
-            thumbColor = colors.onPrimaryContainer,
-            activeTrackColor = colors.onPrimaryContainer,
-            inactiveTrackColor = colors.onPrimaryContainer.copy(alpha = 0.2f)
-        ),
-        modifier = Modifier //per fer mes gran el en si la barra
-            .padding(horizontal = 24.dp),
-        squigglesSpec = SquigglySlider.SquigglesSpec(
-            strokeWidth = 6.dp,
-            amplitude = if (isPlaying) 4.dp else 0.dp,
-        )
-
-    )
-    Row(
-        modifier = Modifier
-            .fillMaxWidth(0.8f),
-        horizontalArrangement = Arrangement.SpaceBetween // Fica un a cada costat
-    ) {
-        Text(
-            formatTime(currentPosition),
-            color = colors.onPrimaryContainer,
-            fontWeight = FontWeight.Bold
-        )
-        Text(formatTime(duration), color = colors.onPrimaryContainer, fontWeight = FontWeight.Bold)
-    }
-}
-
-@Composable
-fun TitolArtista(song: Song, colors: ColorScheme) {
-    //basicmarquee fa que es mogui el text si no quep en una linea, util per cuan el nom es molt llarg i no tenir que expandir amb maxLines ja que podria fer que les lyrics despres no es veiesin
-    Text(
-        song.title,
-        style = MaterialTheme.typography.titleLarge,
-        fontWeight = FontWeight.Bold,
-        color = colors.onPrimaryContainer,
-        modifier = Modifier
-            .fillMaxWidth(0.9f)
-            .padding(start = 24.dp)
-            .basicMarquee(Int.MAX_VALUE, repeatDelayMillis = 2000)
-    )
-    Text(
-        song.artist,
-        style = MaterialTheme.typography.titleMedium,
-        fontWeight = FontWeight.Bold,
-        color = colors.onPrimaryContainer,
-        modifier = Modifier
-            .fillMaxWidth(0.9f)
-            .padding(start = 24.dp)
-    )
-
-}
-
-@Composable
+//lyrics
 fun Lyrics(
     song: Song,
     currentPosition: Long,
     onLyricsDownloaded: (String) -> Unit,
     onSeek: (Long) -> Unit,
-    colors: ColorScheme
+    colors: ColorScheme,
+    listState: LazyListState
 ) {
+    //definim un fil
     val scope = rememberCoroutineScope()
+    //li donem contexte
     val context = LocalContext.current
 
     //lyrics acutals //fem servir keys per si canvia la canço que s'actualitzin i no surti l'anterior
@@ -198,8 +88,7 @@ fun Lyrics(
     val isSynced = remember(currentLyrics) {
         currentLyrics?.trimStart()?.startsWith("[") == true
     }
-    // netegem les lyrics abans de parsear
-    // - treiem linies que nomes tenen timestamp sense text (ex: "[00:08.57]")
+
 
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         if (currentLyrics == null) {
@@ -252,6 +141,8 @@ fun Lyrics(
                 //alert dialog per obrir finestra emergent
                 AlertDialog(
                     //per si toquem fora
+                    containerColor = colors.primaryContainer,
+                    textContentColor = colors.onPrimaryContainer,
                     onDismissRequest = { llistaResultat = null },
                     title = {
                         //camp de buscar
@@ -261,34 +152,15 @@ fun Lyrics(
                             label = { Text("Cercar lletra") },
                             modifier = Modifier.fillMaxWidth(),
                             singleLine = true,
-                            trailingIcon = {
-                                IconButton(onClick = {
-                                    //consulta fora del main thread un altre cop
-                                    scope.launch(Dispatchers.IO) {
-                                        try {
-                                            val response =
-                                                RetrofitClient.instance.getLyricsLlista(manualQuery)
-                                            //retornem la llista al main
-                                            withContext(Dispatchers.Main) {
-                                                llistaResultat = response
-                                            }
-                                            //ficat _ en canvi de e (quick fix de android studio) perque no mostri warning
-                                        } catch (_: Exception) {
-                                            withContext(Dispatchers.Main) {
-                                                //per controlar si falles el internet o el servidor
-                                                Toast.makeText(
-                                                    context,
-                                                    "Error de connexió",
-                                                    Toast.LENGTH_SHORT
-                                                ).show()
-                                            }
-                                        }
-                                    }
-                                }) {
-                                    //icona per buscar
-                                    Icon(Icons.Rounded.Search, contentDescription = "Buscar")
-                                }
-                            }
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedTextColor = colors.onPrimaryContainer,        // color text
+                                unfocusedTextColor = colors.onPrimaryContainer,      // color text
+                                focusedBorderColor = colors.onPrimaryContainer,      // color vora
+                                unfocusedBorderColor = colors.onPrimaryContainer,    // color vora
+                                unfocusedLabelColor = colors.onPrimaryContainer,       // color text d'adalt
+                                focusedLabelColor = colors.onPrimaryContainer,       // color text d'adalt
+                                cursorColor = colors.onPrimaryContainer              // color senyalador
+                            ),
                         )
                     },
                     //mostrem la llista
@@ -322,7 +194,30 @@ fun Lyrics(
                         }
                     },
                     confirmButton = {
-                        TextButton(onClick = { llistaResultat = null }) { Text("Tancar") }
+                        TextButton(onClick = { llistaResultat = null }) { Text("Tancar", color = colors.onPrimaryContainer) }
+                        TextButton(onClick = {
+                            //consulta fora del main thread un altre cop
+                            scope.launch(Dispatchers.IO) {
+                                try {
+                                    val response =
+                                        RetrofitClient.instance.getLyricsLlista(manualQuery)
+                                    //retornem la llista al main
+                                    withContext(Dispatchers.Main) {
+                                        llistaResultat = response
+                                    }
+                                    //ficat _ en canvi de e (quick fix de android studio) perque no mostri warning
+                                } catch (_: Exception) {
+                                    withContext(Dispatchers.Main) {
+                                        //per controlar si falles el internet o el servidor
+                                        Toast.makeText(
+                                            context,
+                                            "Error de connexió",
+                                            Toast.LENGTH_SHORT
+                                        ).show()
+                                    }
+                                }
+                            }
+                        }) { Text("Buscar", color = colors.onPrimaryContainer) }
                     }
                 )
             }
@@ -376,27 +271,29 @@ fun Lyrics(
         } else {
             if (isSynced) {
                 //Karaoke (llibreria accompanist-lyrics-ui)
+                // netegem les lyrics abans de parsear
+                // - treiem linies  nomes tenen timestamp sense text (ex: "[00:08.57]")
+
                 val cleanedLyrics = remember(currentLyrics) {
                     currentLyrics!!
                         .lines()
                         .filter { line ->
                             val stripped =
-                                line.replace(Regex("\\[\\d{2}:\\d{2}\\.\\d{2}\\]"), "").trim()
+                                line.replace(Regex("\\[\\d{2}:\\d{2}\\.\\d{2}]"), "").trim()
                             stripped.isNotEmpty() && stripped != "♪"
                         }
                         .distinctBy { line ->
-                            Regex("\\[\\d{2}:\\d{2}\\.\\d{2}\\]").find(line)?.value ?: line
+                            Regex("\\[\\d{2}:\\d{2}\\.\\d{2}]").find(line)?.value ?: line
                         }
                         .joinToString("\n")
                 }
 
-                val lyricsParser = remember { AutoParser.Builder().build() }
+                val lyricsParser = remember { AutoParser.Builder().build() } //dependencia llibreria
                 val lyrics = remember(currentLyrics) {
                     lyricsParser.parse(cleanedLyrics)
                 }
-                val listState = remember(song.id) { LazyListState() }
                 val timeProvider by rememberUpdatedState(currentPosition.toInt())
-
+                //llibreria acommpanist-ui
                 KaraokeLyricsView(
                     listState = listState,
                     lyrics = lyrics,
@@ -405,98 +302,11 @@ fun Lyrics(
                     onLinePressed = { line -> onSeek(line.start.toLong()) },
                     modifier = Modifier.fillMaxWidth(0.9f),
                     textColor = colors.onPrimaryContainer,
+                    blendMode = BlendMode.SrcOver,
                     breathingDotsDefaults = KaraokeBreathingDotsDefaults(
                         breathingDotsColor = colors.onPrimaryContainer
                     )
 
-                )
-            }
-        }
-    }
-}
-
-@Composable
-fun BarraBotons(
-    onPrevious: () -> Unit,
-    onPlayPause: () -> Unit,
-    isPlaying: Boolean,
-    onNext: () -> Unit,
-    color: Color
-) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(bottom = 16.dp, start = 16.dp, end = 16.dp)
-            .background(
-                color = color.copy(alpha = 0.1f),
-                shape = RoundedCornerShape(32.dp)
-            )
-            .border(
-                width = 1.dp,
-                color = color.copy(alpha = 0.25f),
-                shape = RoundedCornerShape(32.dp)
-            )
-            .padding(vertical = 8.dp, horizontal = 4.dp)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceEvenly,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            // Aleatori
-            IconButton(onClick = { /*TODO*/ }) {
-                Icon(
-                    Icons.Rounded.Shuffle,
-                    contentDescription = null,
-                    tint = color.copy(alpha = 0.7f),
-                    modifier = Modifier.size(24.dp)
-                )
-            }
-
-            // Anterior
-            IconButton(onClick = onPrevious) {
-                Icon(
-                    Icons.Rounded.SkipPrevious,
-                    contentDescription = null,
-                    tint = color,
-                    modifier = Modifier.size(36.dp)
-                )
-            }
-
-            // Play/Pause (sin borde propio, ya lo da el contenedor)
-            FilledIconButton(
-                onClick = onPlayPause,
-                modifier = Modifier.size(80.dp),
-                shape = RoundedCornerShape(24.dp),
-                colors = IconButtonDefaults.filledIconButtonColors(
-                    containerColor = color.copy(alpha = 0.2f),
-                    contentColor = color.copy(alpha = 0.9f)
-                )
-            ) {
-                Icon(
-                    imageVector = if (isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
-                    contentDescription = null,
-                    modifier = Modifier.size(40.dp)
-                )
-            }
-
-            // Següent
-            IconButton(onClick = onNext) {
-                Icon(
-                    Icons.Rounded.SkipNext,
-                    contentDescription = null,
-                    tint = color,
-                    modifier = Modifier.size(36.dp)
-                )
-            }
-
-            // Bucle
-            IconButton(onClick = { }) {
-                Icon(
-                    Icons.Rounded.Repeat,
-                    contentDescription = null,
-                    tint = color.copy(alpha = 0.7f),
-                    modifier = Modifier.size(24.dp)
                 )
             }
         }

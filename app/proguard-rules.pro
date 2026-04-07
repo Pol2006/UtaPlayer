@@ -1,12 +1,12 @@
 # 1. Mantener tus modelos de datos (Crucial para Retrofit y Room)
 # Esto evita que R8 cambie el nombre de los campos como 'trackName' o 'plainLyrics'
--keep class polete.utaplayer.LyricSearchResult { *; }
--keep class polete.utaplayer.Song { *; }
+-keep class polete.utaplayer.api.LyricSearchResult { *; }
+-keep class polete.utaplayer.dataclass.Song { *; }
 
 # 2. Mantener las interfaces de API y DAO
 # Si R8 cambia el nombre de 'getLyricsLlista', Retrofit no sabrá qué URL llamar
--keep interface polete.utaplayer.LyricsApi { *; }
--keep interface polete.utaplayer.SongDao { *; }
+-keep interface polete.utaplayer.api.LyricsApi { *; }
+-keep interface polete.utaplayer.bdd.SongDao { *; }
 
 # 3. Reglas para Retrofit y GSON
 # Estas son estándar para que el motor de red no falle
