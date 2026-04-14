@@ -1,15 +1,18 @@
 package polete.utaplayer.visual
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.QueueMusic
 import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Repeat
@@ -32,7 +35,9 @@ fun BarraBotons(
     onPlayPause: () -> Unit,
     isPlaying: Boolean,
     onNext: () -> Unit,
-    color: Color
+    color: Color,
+    shuffle: () -> Unit,
+    shuffleEnabled: Boolean
 ) {
     Box(
         modifier = Modifier
@@ -55,11 +60,16 @@ fun BarraBotons(
             verticalAlignment = Alignment.CenterVertically
         ) {
             // Aleatori
-            IconButton(onClick = { /*TODO*/ }) {
+
+            FilledIconButton(onClick = { shuffle() },
+                shape = RoundedCornerShape(8.dp),
+                colors = IconButtonDefaults.filledIconButtonColors(
+                containerColor = if(shuffleEnabled) color.copy(alpha = 0.2f) else color.copy(alpha = 0f),
+                )) {
                 Icon(
                     Icons.Rounded.Shuffle,
                     contentDescription = null,
-                    tint = color.copy(alpha = 0.7f),
+                    tint = if(shuffleEnabled) color else color.copy(alpha = 0.5f),
                     modifier = Modifier.size(24.dp)
                 )
             }
@@ -74,7 +84,7 @@ fun BarraBotons(
                 )
             }
 
-            // Play/Pause (sin borde propio, ya lo da el contenedor)
+            // Play/Pause
             FilledIconButton(
                 onClick = onPlayPause,
                 modifier = Modifier.size(80.dp),
@@ -110,6 +120,7 @@ fun BarraBotons(
                     modifier = Modifier.size(24.dp)
                 )
             }
+
         }
     }
 }

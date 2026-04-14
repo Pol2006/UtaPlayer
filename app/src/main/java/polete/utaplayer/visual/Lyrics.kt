@@ -281,7 +281,7 @@ fun Lyrics(
             if (isSynced) {
                 //Karaoke (llibreria accompanist-lyrics-ui)
                 // netegem les lyrics abans de parsear
-                // - treiem linies  nomes tenen timestamp sense text (ex: "[00:08.57]")
+                //treiem linies  nomes tenen timestamp sense text (ex: "[00:08.57]")
 
                 val cleanedLyrics = remember(currentLyrics) {
                     currentLyrics!!

@@ -130,6 +130,8 @@ fun UtaPlayerApp() {
     var selectedTab by remember { mutableIntStateOf(0) }
     val tabs = listOf("Songs", "Albums")
     var selectedAlbumId by remember { mutableStateOf<Long?>(null) }
+    var shuffleEnabled by remember { mutableStateOf(false) }
+
 
     //es com un LaunchedEffect pero al tencar la app anira al ondispose
     DisposableEffect(Unit) {
@@ -369,9 +371,28 @@ fun UtaPlayerApp() {
                 onPrevious = { controller?.seekToPrevious() },
                 songDao = songDao,
                 scope = scope,
-                onClose = { isFullScreen = false }
+                onClose = { isFullScreen = false },
+                shuffle = { if (controller != null) controller!!.shuffleModeEnabled = !controller!!.shuffleModeEnabled
+                    shuffleEnabled = controller!!.shuffleModeEnabled
 
-            )
+                },
+                shuffleEnabled = shuffleEnabled,
+                queue = (if(selectedTab == 1 && currentSong?.albumId == selectedAlbumId) songList.filter { it.albumId == selectedAlbumId } else songList) ,
+                onQueueSongClick = { cancoClicada ->
+                    val currentQueue = if (selectedTab == 0) songList
+                    else songList.filter { it.albumId == selectedAlbumId }
+                    currentSong = cancoClicada
+                    val index = songList.indexOf(cancoClicada)
+                    if (index != -1) {
+                        controller?.setMediaItems(currentQueue.map { it.toMediaItem() })
+                        controller?.seekTo(index, 0L)
+                        controller?.prepare()
+                        controller?.play()
+                    }
+                },
+
+
+                )
         }
     }
 }

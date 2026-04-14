@@ -2,6 +2,7 @@ package polete.utaplayer.visual
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -18,9 +19,11 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.QueueMusic
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.MusicNote
+import androidx.compose.material.icons.rounded.QueueMusic
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -30,6 +33,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.input.pointer.pointerInput
@@ -51,8 +55,13 @@ fun PlayerFullScreen(
     onPlayPause: () -> Unit,     // pausar / reanudar
     onSeek: (Long) -> Unit,      // barra de temps (avisa on ha tocat)
     onNext: () -> Unit,          //seguent canço
-    onPrevious: () -> Unit,       //anterior canço
-    songDao: SongDao, scope: CoroutineScope, onClose: () -> Unit
+    onPrevious: () -> Unit,      //anterior canço
+    shuffle: () -> Unit,         //shuffle
+    shuffleEnabled: Boolean,     //per saber si esta actiu o no per canviar el boto
+    queue: List<Song>,
+    onQueueSongClick: (Song) -> Unit,
+    songDao: SongDao, scope: CoroutineScope, onClose: () -> Unit,
+
 
 ) {
     // colors
@@ -75,6 +84,8 @@ fun PlayerFullScreen(
     var karaokeFullScreen by remember { mutableStateOf(false) }
 
     val lyricsListState = remember(song.id, karaokeFullScreen) { LazyListState() }
+
+    var showQueueDialog by remember { mutableStateOf(false) }
 
     // pantalla full screen
     Box(
@@ -130,8 +141,14 @@ fun PlayerFullScreen(
                 )
             }
             //Botons de control
-            BarraBotons(onPrevious, onPlayPause, isPlaying, onNext, colors.primary)
+            BarraBotons(onPrevious, onPlayPause, isPlaying, onNext,colors.primary, shuffle, shuffleEnabled)
         }
+
+        val animaciotancar by animateFloatAsState(
+            targetValue = if (karaokeFullScreen) -1f else 0f,
+            animationSpec = tween(durationMillis = 300),
+            label = "AnimacioTancar"
+        )
 
         //tancar (flexeta avall)
         IconButton(
@@ -139,8 +156,7 @@ fun PlayerFullScreen(
             modifier = Modifier
                 .padding(8.dp)
                 .size(48.dp)
-                .align(Alignment.TopStart)
-        ) {
+                .align(BiasAlignment(horizontalBias = animaciotancar, verticalBias = -1f))        ) {
             Icon(
                 imageVector = Icons.Rounded.KeyboardArrowDown,
                 contentDescription = "Tancar",
@@ -149,32 +165,58 @@ fun PlayerFullScreen(
             )
         }
 
+        //cua de cançons
+        if(!karaokeFullScreen){
+            IconButton(
+                onClick = { showQueueDialog = true },
+                modifier = Modifier
+                    .padding(8.dp)
+                    .size(48.dp)
+                    .align(Alignment.TopStart)
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Rounded.QueueMusic,
+                    contentDescription = "Ver cola",
+                    tint = colors.onSurface,
+                    modifier = Modifier.size(36.dp)
+                )
+            }
+        }
+        if (showQueueDialog) {
+            QueueDialog(
+                queue = if(shuffleEnabled) listOf(song) else queue,
+                currentSong = song,
+                onSongClick = onQueueSongClick,
+                onDismiss = { showQueueDialog = false },
+                shuffleEnabled = shuffleEnabled,
+                colors = colors
+            )
+        }
+
         if(karaokeFullScreen){
             Titol(
                 song = song,
                 colors = colors,
                 modifier = Modifier
-                    .padding(top = 16.dp, start = 48.dp, end = 48.dp) // Espai per no xocar amb les icones dels costats
-                    .align(Alignment.TopCenter) // Posicionament dins del Box
+                    .padding(top = 16.dp, start = 48.dp, end = 48.dp)
+                    .align(Alignment.TopCenter)
             )
             IconButton(
                 onClick = {
                     scope.launch(Dispatchers.IO) {
-                        // Esborrem les lletres de la base de dades
                         songDao.deleteLyrics(song.id)
-                        // Opcional: pots forçar una recàrrega aquí si la teva lògica de lletres ho requereix
                     }
                 },
                 modifier = Modifier
                     .padding(16.dp)
-                    .align(Alignment.BottomEnd) // El posem a baix a la dreta
-                    .navigationBarsPadding() // Perquè no quedi tapat per la barra de navegació
-                    .padding(bottom = 85.dp) // Pujem una mica perquè no toqui els botons de control (Play/Next)
+                    .align(Alignment.BottomEnd)
+                    .navigationBarsPadding()
+                    .padding(bottom = 85.dp)
             ) {
                 Icon(
-                    imageVector = Icons.Rounded.Delete, // O Icons.Rounded.Delete
+                    imageVector = Icons.Rounded.Delete,
                     contentDescription = "Esborrar lletres",
-                    tint = colors.onSurface.copy(alpha = 0.6f), // Una mica transparent perquè no distregui
+                    tint = colors.onSurface.copy(alpha = 0.6f),
                     modifier = Modifier.size(28.dp)
                 )
             }
@@ -197,5 +239,4 @@ fun PlayerFullScreen(
         }
 
     }
-
 }
