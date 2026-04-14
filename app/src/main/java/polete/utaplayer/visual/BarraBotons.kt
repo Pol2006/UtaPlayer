@@ -16,6 +16,8 @@ import androidx.compose.material.icons.automirrored.rounded.QueueMusic
 import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Repeat
+import androidx.compose.material.icons.rounded.RepeatOn
+import androidx.compose.material.icons.rounded.RepeatOneOn
 import androidx.compose.material.icons.rounded.Shuffle
 import androidx.compose.material.icons.rounded.SkipNext
 import androidx.compose.material.icons.rounded.SkipPrevious
@@ -37,7 +39,9 @@ fun BarraBotons(
     onNext: () -> Unit,
     color: Color,
     shuffle: () -> Unit,
-    shuffleEnabled: Boolean
+    shuffleEnabled: Boolean,
+    bucle: () -> Unit,
+    bucleMode: Int
 ) {
     Box(
         modifier = Modifier
@@ -112,9 +116,9 @@ fun BarraBotons(
             }
 
             // Bucle
-            IconButton(onClick = { }) {
+            IconButton(onClick = { bucle() }) {
                 Icon(
-                    Icons.Rounded.Repeat,
+                    imageVector = if(bucleMode == 0) Icons.Rounded.Repeat else if (bucleMode == 1) Icons.Rounded.RepeatOneOn else if (bucleMode == 2) Icons.Rounded.RepeatOn else Icons.Rounded.Repeat,
                     contentDescription = null,
                     tint = color.copy(alpha = 0.7f),
                     modifier = Modifier.size(24.dp)

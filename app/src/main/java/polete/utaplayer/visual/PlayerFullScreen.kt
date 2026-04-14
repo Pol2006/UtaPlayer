@@ -1,5 +1,6 @@
 package polete.utaplayer.visual
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
@@ -60,6 +61,8 @@ fun PlayerFullScreen(
     shuffleEnabled: Boolean,     //per saber si esta actiu o no per canviar el boto
     queue: List<Song>,
     onQueueSongClick: (Song) -> Unit,
+    bucle: () -> Unit,
+    bucleMode: Int,
     songDao: SongDao, scope: CoroutineScope, onClose: () -> Unit,
 
 
@@ -141,7 +144,7 @@ fun PlayerFullScreen(
                 )
             }
             //Botons de control
-            BarraBotons(onPrevious, onPlayPause, isPlaying, onNext,colors.primary, shuffle, shuffleEnabled)
+            BarraBotons(onPrevious, onPlayPause, isPlaying, onNext,colors.primary, shuffle, shuffleEnabled, bucle, bucleMode)
         }
 
         val animaciotancar by animateFloatAsState(
@@ -237,6 +240,9 @@ fun PlayerFullScreen(
                 modifier = Modifier.size(36.dp)
             )
         }
+
+        if(karaokeFullScreen)
+            BackHandler { karaokeFullScreen = !karaokeFullScreen }
 
     }
 }

@@ -131,7 +131,7 @@ fun UtaPlayerApp() {
     val tabs = listOf("Songs", "Albums")
     var selectedAlbumId by remember { mutableStateOf<Long?>(null) }
     var shuffleEnabled by remember { mutableStateOf(false) }
-
+    var bucle by remember { mutableIntStateOf(Player.REPEAT_MODE_OFF) }
 
     //es com un LaunchedEffect pero al tencar la app anira al ondispose
     DisposableEffect(Unit) {
@@ -145,6 +145,7 @@ fun UtaPlayerApp() {
                 currentSong = songList.find { it.id == mediaId }
                 isPlaying = c.isPlaying
             }
+            bucle = c.repeatMode
             // Indica que el codi anterior s'ha d'executar immediatament en el mateix fil. (optimitzacio)
         }, MoreExecutors.directExecutor())
         //tanca conexio al tencar app
@@ -217,6 +218,8 @@ fun UtaPlayerApp() {
         // serveix per el canvi de canço que no es quedi penjada la barra
         currentPosition = c.currentPosition
         duration = c.duration.coerceAtLeast(0L)
+
+
     }
     //listener de exoplayer (necesari) per saber si la musica sona o no
     LaunchedEffect(controller) {
@@ -224,7 +227,9 @@ fun UtaPlayerApp() {
             override fun onIsPlayingChanged(playing: Boolean) {
                 isPlaying = playing
             }
-
+            override fun onRepeatModeChanged(repeatMode: Int) {
+                bucle = repeatMode
+            }
             // detecta canvi de canço
             override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
                 val idSonant = mediaItem?.mediaId?.toLongOrNull()
@@ -390,9 +395,15 @@ fun UtaPlayerApp() {
                         controller?.play()
                     }
                 },
+                bucle = {val estatBucle = if (controller?.repeatMode == Player.REPEAT_MODE_OFF) Player.REPEAT_MODE_ALL
+                             else if (controller?.repeatMode == Player.REPEAT_MODE_ALL) Player.REPEAT_MODE_ONE
+                                else Player.REPEAT_MODE_OFF
+                    controller!!.repeatMode = estatBucle
+                    bucle = estatBucle
+                },
+                bucleMode = bucle
 
-
-                )
+            )
         }
     }
 }
