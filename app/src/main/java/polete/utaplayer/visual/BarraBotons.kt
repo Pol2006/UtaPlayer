@@ -1,18 +1,15 @@
 package polete.utaplayer.visual
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.QueueMusic
 import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Repeat
@@ -116,7 +113,11 @@ fun BarraBotons(
             }
 
             // Bucle
-            IconButton(onClick = { bucle() }) {
+            FilledIconButton(onClick = { bucle() },
+                shape = RoundedCornerShape(8.dp),
+                colors = IconButtonDefaults.filledIconButtonColors(
+                    containerColor = if(bucleMode > 0) color.copy(alpha = 0.2f) else color.copy(alpha = 0f),
+                )) {
                 Icon(
                     imageVector = if(bucleMode == 0) Icons.Rounded.Repeat else if (bucleMode == 1) Icons.Rounded.RepeatOneOn else if (bucleMode == 2) Icons.Rounded.RepeatOn else Icons.Rounded.Repeat,
                     contentDescription = null,

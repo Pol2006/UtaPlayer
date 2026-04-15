@@ -11,10 +11,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.CoroutineScope
+import polete.utaplayer.bdd.SongDao
 import polete.utaplayer.dataclass.Song
 
 @Composable
-fun SongsTab(songList: List<Song>, currentSong: Song?, padding: PaddingValues, onSongClick: (Song) -> Unit){
+fun SongsTab(songList: List<Song>, currentSong: Song?, padding: PaddingValues, onSongClick: (Song) -> Unit, songDao: SongDao, scope: CoroutineScope){
     if (songList.isNotEmpty()) LazyColumn(
         modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(
             top = padding.calculateTopPadding(),
@@ -26,6 +28,8 @@ fun SongsTab(songList: List<Song>, currentSong: Song?, padding: PaddingValues, o
                 song = canco,
                 onSongClick = onSongClick,
                 currentSong = currentSong,
+                scope = scope,
+                songDao = songDao
             )
         }
     }

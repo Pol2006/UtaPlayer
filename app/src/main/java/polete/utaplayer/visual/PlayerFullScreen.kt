@@ -21,10 +21,9 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.QueueMusic
-import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.MusicNote
-import androidx.compose.material.icons.rounded.QueueMusic
+import androidx.compose.material.icons.rounded.StarOutline
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -63,7 +62,8 @@ fun PlayerFullScreen(
     onQueueSongClick: (Song) -> Unit,
     bucle: () -> Unit,
     bucleMode: Int,
-    songDao: SongDao, scope: CoroutineScope, onClose: () -> Unit,
+    songDao: SongDao, scope: CoroutineScope,
+    onClose: () -> Unit,
 
 
 ) {
@@ -124,6 +124,8 @@ fun PlayerFullScreen(
                     ImgAlbum(song)
                     //Titol i artista
                     TitolArtista(song, colors)
+
+
                 }
             }
 
@@ -204,25 +206,6 @@ fun PlayerFullScreen(
                     .padding(top = 16.dp, start = 48.dp, end = 48.dp)
                     .align(Alignment.TopCenter)
             )
-            IconButton(
-                onClick = {
-                    scope.launch(Dispatchers.IO) {
-                        songDao.deleteLyrics(song.id)
-                    }
-                },
-                modifier = Modifier
-                    .padding(16.dp)
-                    .align(Alignment.BottomEnd)
-                    .navigationBarsPadding()
-                    .padding(bottom = 85.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Rounded.Delete,
-                    contentDescription = "Esborrar lletres",
-                    tint = colors.onSurface.copy(alpha = 0.6f),
-                    modifier = Modifier.size(28.dp)
-                )
-            }
         }
 
         //obrir lyrics

@@ -1,5 +1,6 @@
 package polete.utaplayer
 
+import android.Manifest
 import android.content.ComponentName
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -48,6 +49,7 @@ import com.google.accompanist.permissions.rememberMultiplePermissionsState
 import com.google.common.util.concurrent.MoreExecutors
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import polete.utaplayer.bdd.AppDatabase
@@ -78,8 +80,8 @@ class MainActivity : ComponentActivity() {
                 // Demanem permisos (Android 13+)
                 val permissionsState = rememberMultiplePermissionsState(
                     permissions = listOf(
-                        android.Manifest.permission.READ_MEDIA_AUDIO,
-                        android.Manifest.permission.POST_NOTIFICATIONS
+                        Manifest.permission.READ_MEDIA_AUDIO,
+                        Manifest.permission.POST_NOTIFICATIONS
                     )
                 )
 
@@ -207,7 +209,7 @@ fun UtaPlayerApp() {
             while (true) {
                 currentPosition = controller?.currentPosition ?: 0L
                 duration = controller?.duration?.coerceAtLeast(0L) ?: 0L // fer que minim sigui 0
-                kotlinx.coroutines.delay(if (isFullScreen) 32L else 500L)
+                delay(if (isFullScreen) 32L else 500L)
             }
         }
     }
@@ -305,7 +307,9 @@ fun UtaPlayerApp() {
                                 controller?.prepare()
                                 controller?.play()
                             }
-                        }
+                        },
+                        songDao = songDao,
+                        scope = scope
                     )
 
                     1 -> {
@@ -330,7 +334,9 @@ fun UtaPlayerApp() {
                                         controller?.prepare()
                                         controller?.play()
                                     }
-                                }
+                                },
+                                songDao = songDao,
+                                scope = scope
                             )
                         } else {
                             AlbumsTab(
