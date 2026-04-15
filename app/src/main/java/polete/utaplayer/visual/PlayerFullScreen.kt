@@ -10,6 +10,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -123,9 +124,36 @@ fun PlayerFullScreen(
                     //img album
                     ImgAlbum(song)
                     //Titol i artista
-                    TitolArtista(song, colors)
+                    Box( //S'ha tret TitolArtista i ho he ficat separat per poder ficar l'icona correctament ja que sino quedava descentrat
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 48.dp),
+                        contentAlignment = Alignment.CenterStart
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(end = 48.dp)
+                        ) {
+                            Titol(song = song, colors = colors)
+                            if(song.artist != "")
+                            Artista(song = song, colors = colors)
+                        }
 
-
+                        IconButton(
+                            onClick = { },
+                            modifier = Modifier
+                                .size(48.dp)
+                                .align(Alignment.CenterEnd)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Rounded.StarOutline,
+                                contentDescription = "Favorito",
+                                tint = colors.onSurface,
+                                modifier = Modifier.size(32.dp)
+                            )
+                        }
+                    }
                 }
             }
 
