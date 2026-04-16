@@ -3,7 +3,7 @@ package polete.utaplayer.utilitats
 import androidx.core.net.toUri
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
-import polete.utaplayer.dataclass.Song
+import polete.utaplayer.bdd.Song
 
 //converteix el objecte canço a un mediaitem reproduible per exoplayer
 //Song.toMediaItem es per no modificar song pero afegir-ho

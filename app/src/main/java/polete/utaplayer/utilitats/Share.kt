@@ -6,7 +6,7 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.provider.MediaStore
-import polete.utaplayer.dataclass.Song
+import polete.utaplayer.bdd.Song
 
 //FUNCIO PER COMPARTIR MUSICA AMB NEARBY SHARE
 fun compartirMusica(context: Context, song: Song) {
@@ -15,13 +15,16 @@ fun compartirMusica(context: Context, song: Song) {
         song.id
     )
 
-    //intent per enviar la canço amb nearby share
     val shareIntent = Intent(Intent.ACTION_SEND).apply {
         type = "audio/*"
+        //stream d'audio
+        putExtra(Intent.EXTRA_STREAM, musicUri)
+        //nom canço
         val clip = ClipData.newRawUri(song.title, musicUri)
         clipData = clip
+        //sino no es veu el nom de el fitxer
+        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
     }
-
     val chooser = Intent.createChooser(shareIntent, song.title)
     context.startActivity(chooser)
 }

@@ -1,6 +1,7 @@
-package polete.utaplayer.dataclass
+package polete.utaplayer.bdd
 
-import androidx.room.*
+import androidx.room.Entity
+import androidx.room.PrimaryKey
 
 @Entity(tableName = "songs")
 data class Song(

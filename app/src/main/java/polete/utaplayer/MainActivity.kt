@@ -53,7 +53,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import polete.utaplayer.bdd.AppDatabase
-import polete.utaplayer.dataclass.Song
+import polete.utaplayer.bdd.Song
 import polete.utaplayer.visual.MiniPlayer
 import polete.utaplayer.ui.theme.UtaplayerTheme
 import polete.utaplayer.utilitats.AudioPlayerService

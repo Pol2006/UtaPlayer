@@ -23,7 +23,7 @@ import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.layout.ContentScale.Companion.Crop
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
-import polete.utaplayer.dataclass.Song
+import polete.utaplayer.bdd.Song
 import polete.utaplayer.utilitats.getAlbumArtUri
 
 @Composable

@@ -38,7 +38,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import polete.utaplayer.bdd.SongDao
-import polete.utaplayer.dataclass.Song
+import polete.utaplayer.bdd.Song
 import polete.utaplayer.dataclass.SongOption
 import polete.utaplayer.utilitats.agafarEsquemaColors
 import polete.utaplayer.utilitats.compartirMusica

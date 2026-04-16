@@ -13,7 +13,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CoroutineScope
 import polete.utaplayer.bdd.SongDao
-import polete.utaplayer.dataclass.Song
+import polete.utaplayer.bdd.Song
 
 @Composable
 fun SongsTab(songList: List<Song>, currentSong: Song?, padding: PaddingValues, onSongClick: (Song) -> Unit, songDao: SongDao, scope: CoroutineScope){

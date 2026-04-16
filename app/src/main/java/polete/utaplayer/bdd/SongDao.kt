@@ -2,7 +2,7 @@ package polete.utaplayer.bdd
 
 import androidx.room.*
 import kotlinx.coroutines.flow.Flow
-import polete.utaplayer.dataclass.Song
+import polete.utaplayer.bdd.Song
 
 @Dao
 interface SongDao {

@@ -2,7 +2,7 @@ package polete.utaplayer.utilitats
 
 import android.content.Context
 import android.provider.MediaStore
-import polete.utaplayer.dataclass.Song
+import polete.utaplayer.bdd.Song
 
 //extreure dades
 fun fetchSongs(context: Context): List<Song> {

@@ -11,7 +11,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import polete.utaplayer.dataclass.Album
-import polete.utaplayer.dataclass.Song
+import polete.utaplayer.bdd.Song
 import kotlin.collections.component1
 import kotlin.collections.component2
 

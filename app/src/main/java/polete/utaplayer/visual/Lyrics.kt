@@ -52,7 +52,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import polete.utaplayer.api.LyricSearchResult
 import polete.utaplayer.api.RetrofitClient
-import polete.utaplayer.dataclass.Song
+import polete.utaplayer.bdd.Song
 import kotlin.collections.filter
 import kotlin.text.lines
 

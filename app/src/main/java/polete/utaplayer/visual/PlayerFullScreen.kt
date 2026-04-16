@@ -42,7 +42,7 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import polete.utaplayer.dataclass.Song
+import polete.utaplayer.bdd.Song
 import polete.utaplayer.bdd.SongDao
 import polete.utaplayer.utilitats.agafarEsquemaColors
 
