@@ -24,6 +24,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.QueueMusic
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.MusicNote
+import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.StarOutline
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -141,14 +142,14 @@ fun PlayerFullScreen(
                         }
 
                         IconButton(
-                            onClick = { },
+                            onClick = { scope.launch(Dispatchers.IO) { songDao.updateFavorite(song.id, if(song.favorite) false else true) } },
                             modifier = Modifier
                                 .size(48.dp)
                                 .align(Alignment.CenterEnd)
                         ) {
                             Icon(
-                                imageVector = Icons.Rounded.StarOutline,
-                                contentDescription = "Favorito",
+                                imageVector = if(song.favorite) Icons.Rounded.Star else Icons.Rounded.StarOutline,
+                                contentDescription = "Preferit",
                                 tint = colors.onSurface,
                                 modifier = Modifier.size(32.dp)
                             )
@@ -167,9 +168,9 @@ fun PlayerFullScreen(
                         scope.launch(Dispatchers.IO) {
                             songDao.updateLyrics(song.id, lyrics)
                         }
-                    }, onSeek = { milisegundos ->
+                    }, onSeek = { ms ->
                         // moure canço al temps de la lletra
-                        onSeek(milisegundos)
+                        onSeek(ms)
                     }, colors = colors, listState = lyricsListState
                 )
             }

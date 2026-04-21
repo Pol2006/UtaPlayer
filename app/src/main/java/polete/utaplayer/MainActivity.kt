@@ -313,9 +313,13 @@ fun UtaPlayerApp() {
                     )
 
                     1 -> {
+                        //modificat per afegir preferits ( -1 = preferits )
                         if (selectedAlbumId != null) {
-                            val albumSongs = songList.filter { it.albumId == selectedAlbumId }
-
+                            val albumSongs = if (selectedAlbumId == -1L) {
+                                songList.filter { it.favorite }
+                            } else {
+                                songList.filter { it.albumId == selectedAlbumId }
+                            }
                             BackHandler {
                                 selectedAlbumId = null
                             }

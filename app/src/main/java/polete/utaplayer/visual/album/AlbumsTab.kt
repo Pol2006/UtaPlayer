@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.runtime.Composable
@@ -26,6 +27,18 @@ fun AlbumsTab(songList: List<Song>, padding: PaddingValues, onAlbumClick: (Long)
                 songCount = songs.size
             )
         }.sortedBy { it.artist }
+
+    }
+
+    val favoritesAlbum = remember(songList) {
+        val favSongs = songList.filter { it.favorite }
+        if (favSongs.isEmpty()) null
+        else Album(
+            albumId = -1L,
+            name = "Preferits",
+            artist = "",
+            songCount = favSongs.size
+        )
     }
     //es per mostrar els albums de 2 en 2
     LazyVerticalGrid(
@@ -38,6 +51,11 @@ fun AlbumsTab(songList: List<Song>, padding: PaddingValues, onAlbumClick: (Long)
         verticalArrangement = Arrangement.spacedBy(8.dp), //separacio albums
         modifier = Modifier.fillMaxSize()
     ) {
+        if (favoritesAlbum != null) {
+            item("favorites") {
+                FavoritesCard(album = favoritesAlbum, onClick = { onAlbumClick(-1L) })
+            }
+        }
         items(albums, key = { it.albumId }) { album ->
             AlbumCard(
                 album = album,

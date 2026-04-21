@@ -30,6 +30,11 @@ interface SongDao {
 
     @Query("SELECT COUNT(*) FROM songs")
     suspend fun getCount(): Int
+
+    @Query("UPDATE songs SET favorite = :isFavorite WHERE id = :id")
+    suspend fun updateFavorite(id: Long, isFavorite: Boolean)
+
+
     @Transaction
     suspend fun syncSongs(songs: List<Song>) {
         // obtenim el que te el movil ara
@@ -41,4 +46,5 @@ interface SongDao {
         //insertem el que si tenim
         insertSongs(songs)
     }
+
 }

@@ -6,8 +6,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.FileDownload
 import androidx.compose.material.icons.rounded.MusicNote
+import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -23,7 +23,7 @@ import polete.utaplayer.utilitats.getAlbumArtUri
 
 @Composable
 //vista de un album
-fun AlbumCard(album: Album, onClick: () -> Unit) {
+fun FavoritesCard(album: Album, onClick: () -> Unit) {
     Card(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
@@ -37,11 +37,12 @@ fun AlbumCard(album: Album, onClick: () -> Unit) {
                 modifier = Modifier
                     .fillMaxWidth()
                     .aspectRatio(1f),
-                error = rememberVectorPainter(if(album.name == "Download") Icons.Rounded.FileDownload else Icons.Rounded.MusicNote)
+                //com que sempre donara error ja que es un album inventat fiquem l'icona que volguem
+                error = rememberVectorPainter(Icons.Rounded.Star)
             )
             Column(modifier = Modifier.padding(10.dp)) {
                 Text(
-                    text = album.name,
+                    text = "Preferits",
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.Medium,
                     maxLines = 1,

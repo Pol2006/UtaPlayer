@@ -12,5 +12,6 @@ data class Song(
     val artist: String, //Nom Artista
     val data: String, //Ruta fitxer
     val duration: Int, //Duracio en ms
-    val lyrics: String? = null //lyrics
+    val lyrics: String? = null, //lyrics
+    var favorite: Boolean = false //si es una canço preferida o no
 )
