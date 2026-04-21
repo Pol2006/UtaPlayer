@@ -45,6 +45,7 @@ fun AlbumsTab(songList: List<Song>, padding: PaddingValues, onAlbumClick: (Long)
         columns = GridCells.Fixed(2),
         contentPadding = PaddingValues(
             start = 8.dp, end = 8.dp,
+            top = 8.dp,
             bottom = padding.calculateBottomPadding() + 80.dp //perque el ultim album no el tapi miniplayer
         ),
         horizontalArrangement = Arrangement.spacedBy(8.dp),//separacio albums

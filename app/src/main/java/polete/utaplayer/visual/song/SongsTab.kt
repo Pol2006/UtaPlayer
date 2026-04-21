@@ -14,12 +14,15 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CoroutineScope
 import polete.utaplayer.bdd.SongDao
 import polete.utaplayer.bdd.Song
+import polete.utaplayer.bdd.playlist.Playlist
+import polete.utaplayer.bdd.playlist.PlaylistDao
+import polete.utaplayer.bdd.playlist.PlaylistWithSongs
 
 @Composable
-fun SongsTab(songList: List<Song>, currentSong: Song?, padding: PaddingValues, onSongClick: (Song) -> Unit, songDao: SongDao, scope: CoroutineScope){
+fun SongsTab(songList: List<Song>, currentSong: Song?, padding: PaddingValues, onSongClick: (Song) -> Unit, songDao: SongDao, scope: CoroutineScope, playlistDao: PlaylistDao, playlists: List<PlaylistWithSongs>){
     if (songList.isNotEmpty()) LazyColumn(
         modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(
-            top = padding.calculateTopPadding(),
+            top = 8.dp,
             bottom = padding.calculateBottomPadding() + 80.dp
         )
     ) {
@@ -29,7 +32,9 @@ fun SongsTab(songList: List<Song>, currentSong: Song?, padding: PaddingValues, o
                 onSongClick = onSongClick,
                 currentSong = currentSong,
                 scope = scope,
-                songDao = songDao
+                songDao = songDao,
+                playlistDao = playlistDao,
+                playlists = playlists
             )
         }
     }

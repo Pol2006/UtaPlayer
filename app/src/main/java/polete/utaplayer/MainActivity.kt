@@ -109,6 +109,10 @@ fun UtaPlayerApp() {
     val database = remember { AppDatabase.getDatabase(context) }
     //declarem el dao
     val songDao = remember { database.songDao() }
+    val playlistDao = remember { database.playlistDao() }
+    val playlistWithSongsList by playlistDao.getAllPlaylistsWithSongs().collectAsState(emptyList())
+    val playlistList by playlistDao.getAllPlaylistsWithSongs().collectAsState(emptyList())
+
     //Serveix per mirar la base de dades en temps real
     val songList by songDao.getAllSongs().collectAsState(emptyList())
     //canço actual
@@ -130,7 +134,7 @@ fun UtaPlayerApp() {
     //controla la conexio amb el reproductor en segon pla
     val controllerPeticio = remember { MediaController.Builder(context, sessionToken).buildAsync() }
     var selectedTab by remember { mutableIntStateOf(0) }
-    val tabs = listOf("Songs", "Albums")
+    val tabs = listOf("Songs", "Albums", "Playlists")
     var selectedAlbumId by remember { mutableStateOf<Long?>(null) }
     var shuffleEnabled by remember { mutableStateOf(false) }
     var bucle by remember { mutableIntStateOf(Player.REPEAT_MODE_OFF) }
@@ -309,7 +313,9 @@ fun UtaPlayerApp() {
                             }
                         },
                         songDao = songDao,
-                        scope = scope
+                        scope = scope,
+                        playlistDao = playlistDao,
+                        playlists = playlistList
                     )
 
                     1 -> {
@@ -340,7 +346,9 @@ fun UtaPlayerApp() {
                                     }
                                 },
                                 songDao = songDao,
-                                scope = scope
+                                scope = scope,
+                                playlistDao = playlistDao,
+                                playlists = playlistList
                             )
                         } else {
                             AlbumsTab(
@@ -352,6 +360,7 @@ fun UtaPlayerApp() {
                             )
                         }
                     }
+                    2 -> {}
                 }
 
             }
