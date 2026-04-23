@@ -50,6 +50,7 @@ import com.google.common.util.concurrent.MoreExecutors
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import polete.utaplayer.bdd.AppDatabase
@@ -63,6 +64,7 @@ import polete.utaplayer.utilitats.toMediaItem
 import polete.utaplayer.visual.PantallaPermisos
 import polete.utaplayer.visual.PlayerFullScreen
 import polete.utaplayer.visual.album.AlbumsTab
+import polete.utaplayer.visual.playlist.PlaylistTab
 import polete.utaplayer.visual.song.SongsTab
 
 class MainActivity : ComponentActivity() {
@@ -136,6 +138,8 @@ fun UtaPlayerApp() {
     var selectedTab by remember { mutableIntStateOf(0) }
     val tabs = listOf("Songs", "Albums", "Playlists")
     var selectedAlbumId by remember { mutableStateOf<Long?>(null) }
+
+    var selectedPlaylistId by remember { mutableStateOf<Long?>(null) }
     var shuffleEnabled by remember { mutableStateOf(false) }
     var bucle by remember { mutableIntStateOf(Player.REPEAT_MODE_OFF) }
 
@@ -319,6 +323,9 @@ fun UtaPlayerApp() {
                     )
 
                     1 -> {
+                        BackHandler {
+                            selectedTab = 0
+                        }
                         //modificat per afegir preferits ( -1 = preferits )
                         if (selectedAlbumId != null) {
                             val albumSongs = if (selectedAlbumId == -1L) {
@@ -360,7 +367,49 @@ fun UtaPlayerApp() {
                             )
                         }
                     }
-                    2 -> {}
+                    2 -> {
+                        BackHandler {
+                            selectedTab = 0
+                        }
+                        if(selectedPlaylistId != null){
+                            val currentPlaylistWithSongs = playlistWithSongsList.find {
+                                it.playlist.playlistId == selectedPlaylistId
+                            }
+                            val playlistSongs = currentPlaylistWithSongs?.songs ?: emptyList()
+
+                            BackHandler {
+                                selectedPlaylistId = null
+                            }
+
+                                SongsTab(
+                                songList = playlistSongs,
+                                currentSong = currentSong,
+                                padding = padding,
+                                onSongClick = { cancoClicada ->
+                                    currentSong = cancoClicada
+                                    controller?.setMediaItems(playlistSongs.map { it.toMediaItem() })
+
+                                    val index = playlistSongs.indexOf(cancoClicada)
+                                    if (index != -1) {
+                                        controller?.seekTo(index, 0L)
+                                        controller?.prepare()
+                                        controller?.play()
+                                    }
+                                },
+                                songDao = songDao,
+                                scope = scope,
+                                playlistDao = playlistDao,
+                                playlists = playlistList
+                            )
+                        }
+
+                        PlaylistTab(
+                        playlistDao = playlistDao,
+                        onPlaylistClick = { playlistId ->
+                            selectedPlaylistId = playlistId },
+                            scope)
+
+                    }
                 }
 
             }

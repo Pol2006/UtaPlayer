@@ -23,6 +23,9 @@ interface PlaylistDao {
     @Query("SELECT * FROM playlists")
     fun getAllPlaylistsWithSongs(): Flow<List<PlaylistWithSongs>>
 
+    @Transaction
+    @Query("SELECT * FROM playlists WHERE playlistId = :playlistId")
+    fun getPlaylistWithSongs(playlistId: Long): Flow<List<PlaylistWithSongs>>
 
     //ELIMINAR CANÇO DE PLAYLIST
     @Query("DELETE FROM playlist_song_ref WHERE playlistId = :playlistId AND songId = :songId")
