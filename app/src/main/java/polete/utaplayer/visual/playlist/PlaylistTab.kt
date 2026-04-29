@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -17,6 +18,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -34,6 +36,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
@@ -53,6 +56,21 @@ fun PlaylistTab(playlistDao: PlaylistDao, onPlaylistClick: (Long) -> Unit, scope
     var showDialog by remember {(mutableStateOf(false))}
     var currentplaylist by remember { mutableStateOf<Long?>(null) }
     Surface(Modifier.background(MaterialTheme.colorScheme.surface).fillMaxWidth().fillMaxHeight().padding(top = 8.dp)) {
+
+        if(playlists.isEmpty())
+            Box(Modifier.fillMaxWidth().fillMaxHeight())
+            {
+                Column(Modifier.align(Alignment.Center), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Icon(
+                        imageVector = Icons.Rounded.Info,
+                        contentDescription = null,
+
+
+                    )
+                    Text("No hi ha cap playlist")
+
+                }
+            }
         LazyColumn() { items(playlists, key = { it.playlist.playlistId }) {playlist ->
 
 
