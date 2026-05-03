@@ -6,6 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -50,7 +51,7 @@ import polete.utaplayer.utilitats.getAlbumArtUri
 import kotlin.collections.take
 
 @Composable
-fun PlaylistTab(playlistDao: PlaylistDao, onPlaylistClick: (Long) -> Unit, scope: CoroutineScope){
+fun PlaylistTab(playlistDao: PlaylistDao, onPlaylistClick: (Long) -> Unit, scope: CoroutineScope, padding: PaddingValues){
 
     val playlists by playlistDao.getAllPlaylistsWithSongs().collectAsState(emptyList())
     var showDialog by remember {(mutableStateOf(false))}
@@ -71,7 +72,7 @@ fun PlaylistTab(playlistDao: PlaylistDao, onPlaylistClick: (Long) -> Unit, scope
 
                 }
             }
-        LazyColumn() { items(playlists, key = { it.playlist.playlistId }) {playlist ->
+        LazyColumn(contentPadding = PaddingValues(bottom = padding.calculateBottomPadding() + 80.dp)) { items(playlists, key = { it.playlist.playlistId }) {playlist ->
 
 
                 Box(Modifier.padding(start = 4.dp, end = 4.dp).clip(RoundedCornerShape(24.dp)).background(MaterialTheme.colorScheme.surfaceVariant).fillMaxWidth().clickable(onClick = { onPlaylistClick(playlist.playlist.playlistId) })) {

@@ -13,7 +13,6 @@ val MPlusRounded = FontFamily(
     Font(R.font.m_plus_rounded_1c, FontWeight.Light),
     Font(R.font.m_plus_rounded_1c_medium, FontWeight.Medium),
     Font(R.font.m_plus_rounded_1c_bold, FontWeight.Bold),
-    Font(R.font.m_plus_rounded_1c_extrabold, FontWeight.ExtraBold)
 )
 val Typography = Typography(
     bodyLarge = TextStyle(

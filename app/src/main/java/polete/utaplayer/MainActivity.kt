@@ -407,7 +407,8 @@ fun UtaPlayerApp() {
                         playlistDao = playlistDao,
                         onPlaylistClick = { playlistId ->
                             selectedPlaylistId = playlistId },
-                            scope)
+                        scope = scope,
+                        padding = padding)
 
                     }
                 }
