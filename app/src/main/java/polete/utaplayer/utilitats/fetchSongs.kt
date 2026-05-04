@@ -17,8 +17,8 @@ fun fetchSongs(context: Context): List<Song> {
         MediaStore.Audio.Media.DATA,
         MediaStore.Audio.Media.DURATION
     )
-    val selection =
-        "${MediaStore.Audio.Media.IS_MUSIC} = 1" //Ara nomes ens donara musica, no audios de whatsapp i altres coses
+    //Ara nomes ens donara musica, no audios de whatsapp i altres coses
+    val selection = "${MediaStore.Audio.Media.IS_MUSIC} = 1 AND ${MediaStore.Audio.Media.DATA} NOT LIKE '%WhatsApp%' AND ${MediaStore.Audio.Media.DATA} NOT LIKE '%Telegram%' AND ${MediaStore.Audio.Media.DATA} NOT LIKE '%Notifications%' AND ${MediaStore.Audio.Media.DATA} NOT LIKE '%Ringtones%' AND ${MediaStore.Audio.Media.DATA} NOT LIKE '%Alarms%'"
 
 
     context.contentResolver.query(uri, projection, selection, null, null)?.use { cursor ->
